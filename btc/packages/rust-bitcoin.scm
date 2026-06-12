@@ -25,6 +25,9 @@
     (build-system cargo-build-system)
     (arguments
      (list
+      ;; The crates.io tarball omits test fixtures (tests/data/*.json),
+      ;; so the test suite cannot even compile; build-only.
+      #:tests? #f
       #:install-source? #t))
     (inputs (lookup-cargo-inputs 'rust-bitcoin))
     (home-page "https://github.com/rust-bitcoin/rust-bitcoin")

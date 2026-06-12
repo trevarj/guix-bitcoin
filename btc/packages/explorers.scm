@@ -31,12 +31,11 @@
     (file-name (git-file-name "mempool" %mempool-version))
     (sha256 (base32 "04g67zmc5ppiaib7rp4csn0kwg1yrph9dkaklznyk0bhmjxshbrz"))))
 
-;; FIXME: real hash from first build.
 (define %backend-node-modules
   (npm-vendored-modules #:name "mempool-backend"
    #:source %mempool-source
    #:subdirectory "backend"
-   #:hash "0000000000000000000000000000000000000000000000000000"
+   #:hash "01jqchx302q9fjjlsglzc9krq61vbilr2xzxjz633050ia6f49p2"
    #:node node-lts))
 
 ;; FIXME: real hash from first build.

@@ -40,10 +40,13 @@
        (method git-fetch)
        (uri (git-reference
              (url "https://github.com/ElementsProject/lightning")
-             (commit (string-append "v" version))))
+             (commit (string-append "v" version))
+             ;; external/libwally-core (and its own secp256k1) are
+             ;; git submodules built in-tree.
+             (recursive? #t)))
        (file-name (git-file-name name version))
        (sha256
-        (base32 "059jbwy0n3vgjr9m519g23zvb95mp5aaasl72qvcxa27f20d4c23"))))
+        (base32 "1izpn420l113raz23m5d5digizy0bmr364w3kn4mlr80idr8s49s"))))
     (build-system gnu-build-system)
     (arguments
      (list
