@@ -14,11 +14,15 @@ case "$set_name" in
   explorers) var=%explorer-packages ;;
   all)   var=%all-packages ;;
   lint)
-    names=$(guix repl -L . <<'EOF'
+    # Script mode (guix repl -- FILE) prints no banner, unlike a heredoc
+    # REPL, whose banner would end up in $names.
+    script=$(mktemp)
+    cat > "$script" <<'EOF'
 (use-modules (etc ci-packages) (guix packages))
 (format #t "~{~a~%~}" (map package-name %all-packages))
 EOF
-    )
+    names=$(guix repl -L . -- "$script")
+    rm -f "$script"
     exec guix lint -L . $names ;;
   *) echo "unknown set: $set_name (want light|nodes|indexers|wallets|lightning|rust|explorers|all|lint)" >&2; exit 1 ;;
 esac
