@@ -307,19 +307,28 @@ Expected: the sha256sum hex digest matches the line in `SHA256SUMS`. (Full build
 
 - [ ] **Step 2: Write the module with bitcoin-core**
 
+This definition adapts the maintainer's proven package from
+`trevarj/bitcoin` branch `origin/guix-package`
+(`contrib/guix/bitcoin-core.scm`) — keep its build phases
+(`BITCOIN_GENBUILD_NO_GIT`, `HOME` for tests, functional test run) and
+adjust source/version/flags for the 31.0 release.
+
 ```scheme
 ;;; guix-bitcoin --- Bitcoin ecosystem packages for GNU Guix
 (define-module (btc packages nodes)
   #:use-module (guix packages)
   #:use-module (guix download)
+  #:use-module (guix gexp)
   #:use-module (guix build-system cmake)
   #:use-module ((guix licenses) #:prefix license:)
   #:use-module (gnu packages boost)
   #:use-module (gnu packages libevent)
+  #:use-module (gnu packages linux)
   #:use-module (gnu packages networking)
   #:use-module (gnu packages pkg-config)
   #:use-module (gnu packages python)
-  #:use-module (gnu packages sqlite))
+  #:use-module (gnu packages sqlite)
+  #:use-module (gnu packages upnp))
 
 (define-public bitcoin-core
   (package
@@ -338,9 +347,19 @@ Expected: the sha256sum hex digest matches the line in `SHA256SUMS`. (Full build
                    "-DBUILD_GUI=OFF")
            #:phases
            #~(modify-phases %standard-phases
+               (add-before 'build 'set-no-git-flag
+                 ;; Not building from a git checkout.
+                 (lambda _ (setenv "BITCOIN_GENBUILD_NO_GIT" "1")))
                (add-before 'check 'set-home
-                 (lambda _ (setenv "HOME" "/tmp"))))))
-    (native-inputs (list pkg-config python-minimal))
+                 ;; Tests write to $HOME.
+                 (lambda _ (setenv "HOME" (getenv "TMPDIR"))))
+               (add-after 'check 'check-functional
+                 (lambda _
+                   (invoke "python3" "./test/functional/test_runner.py"
+                           (string-append "--jobs="
+                                          (number->string
+                                           (parallel-job-count)))))))))
+    (native-inputs (list pkg-config python util-linux))
     (inputs (list boost sqlite zeromq))
     (home-page "https://bitcoincore.org/")
     (synopsis "Bitcoin full-node reference implementation")
@@ -361,7 +380,7 @@ Replace `@HASH@` with the base32 hash from Step 1.
 guix build -L . bitcoin-core
 ```
 
-Expected: a store path. The `check` phase runs the upstream ctest suite. If CMake rejects a flag (e.g. `BUILD_GUI` renamed), run `tar xf` on the source and check `CMakeLists.txt` option names; fix the flag, never delete the wallet/ZMQ features.
+Expected: a store path. The `check` phase runs the upstream ctest suite, then the functional test suite (this is what makes the build long). If CMake rejects a flag (e.g. `BUILD_GUI` renamed), run `tar xf` on the source and check `CMakeLists.txt` option names; fix the flag, never delete the wallet/ZMQ features. If configure fails for lack of libevent, add `libevent` to `inputs` (Core 30+ is expected not to need it; Knots 29 does). Run long builds with the Bash tool's `run_in_background` option and poll — foreground Bash calls time out at 10 minutes.
 
 - [ ] **Step 4: Smoke-test the binary**
 
@@ -391,10 +410,20 @@ git commit -m "packages: add bitcoin-core
 - [ ] **Step 1: Fetch source hash**
 
 ```bash
-guix download https://bitcoinknots.org/files/29.x/29.3.knots20260508/bitcoin-29.3.knots20260508.tar.gz
+guix download https://github.com/bitcoinknots/bitcoin/releases/download/v29.3.knots20260508/bitcoin-29.3.knots20260508.tar.gz
 ```
 
+(GitHub-releases URL pattern taken from the maintainer's proven package on
+`trevarj/bitcoin` branch `origin/guix-package-knots`. If the asset is
+missing there, fall back to
+`https://bitcoinknots.org/files/29.x/29.3.knots20260508/bitcoin-29.3.knots20260508.tar.gz`.)
+
 - [ ] **Step 2: Append bitcoin-knots to the module**
+
+Adapted from the maintainer's working definition
+(`contrib/guix/bitcoin-knots.scm` on `origin/guix-package-knots`): same
+build phases, with version bumped 29.1→29.3, ZMQ enabled, GUI and BDB
+legacy wallet excluded.
 
 ```scheme
 (define-public bitcoin-knots
@@ -403,8 +432,9 @@ guix download https://bitcoinknots.org/files/29.x/29.3.knots20260508/bitcoin-29.
     (version "29.3.knots20260508")
     (source (origin
               (method url-fetch)
-              (uri (string-append "https://bitcoinknots.org/files/29.x/"
-                                  version "/bitcoin-" version ".tar.gz"))
+              (uri (string-append
+                    "https://github.com/bitcoinknots/bitcoin/releases/download/v"
+                    version "/bitcoin-" version ".tar.gz"))
               (sha256 (base32 "@HASH@"))))
     (build-system cmake-build-system)
     (arguments
@@ -415,10 +445,18 @@ guix download https://bitcoinknots.org/files/29.x/29.3.knots20260508/bitcoin-29.
                    "-DWITH_BDB=OFF")
            #:phases
            #~(modify-phases %standard-phases
+               (add-before 'build 'set-no-git-flag
+                 (lambda _ (setenv "BITCOIN_GENBUILD_NO_GIT" "1")))
                (add-before 'check 'set-home
-                 (lambda _ (setenv "HOME" "/tmp"))))))
-    (native-inputs (list pkg-config python-minimal))
-    (inputs (list boost libevent sqlite zeromq))
+                 (lambda _ (setenv "HOME" (getenv "TMPDIR"))))
+               (add-after 'check 'check-functional
+                 (lambda _
+                   (invoke "python3" "./test/functional/test_runner.py"
+                           (string-append "--jobs="
+                                          (number->string
+                                           (parallel-job-count)))))))))
+    (native-inputs (list pkg-config python util-linux))
+    (inputs (list boost libevent miniupnpc sqlite zeromq))
     (home-page "https://bitcoinknots.org/")
     (synopsis "Bitcoin full-node implementation with extended policy options")
     (description
@@ -767,32 +805,92 @@ git commit -m "tests: add bitcoin-node system test
 ### Task 7: CI and contributor policy
 
 **Files:**
-- Create: `.woodpecker.yml`
+- Create: `etc/ci-packages.scm` (named package sets)
+- Create: `etc/ci-build.sh` (set-selecting build driver)
+- Create: `.woodpecker/check.yml` (cheap gate: lint + light packages, every push)
+- Create: `.woodpecker/nodes.yml` (heavy node builds: path-triggered or manual)
 - Create: `CONTRIBUTING.md`
 
-- [ ] **Step 1: Write `.woodpecker.yml`**
+CI is organized around **package sets** so heavy builds (bitcoin-core,
+bitcoin-knots) only run when their module changes or when triggered
+manually with a chosen set — this is also how long builds get offloaded
+to a CI runner instead of a laptop.
 
-```yaml
-# Codeberg Woodpecker CI: verify every channel package builds and lints.
-# Requires a runner with KVM disabled-tolerant guix; the metacall/guix
-# image ships a ready guix daemon.
-steps:
-  build:
-    image: metacall/guix:latest
-    commands:
-      - guix describe || true
-      - guix build -L . libsecp256k1 libsecp256k1-zkp univalue
-      - guix build -L . bitcoin-core bitcoin-knots
-      - guix lint -L . libsecp256k1 libsecp256k1-zkp univalue bitcoin-core bitcoin-knots
-  authenticate:
-    image: metacall/guix:latest
-    commands:
-      - guix git authenticate "$(git rev-parse "$(git log --reverse --format=%H -- .guix-authorizations | head -1)")" "A6C2 0D0C 2AD8 38F9 4907  0EA3 A52D 6879 4EBE D758" || echo "WARN: authentication check needs full clone with keyring branch"
+- [ ] **Step 1: Write `etc/ci-packages.scm`**
+
+```scheme
+;;; Named package sets for CI and local driver use.
+;;; Usage: guix build -L . -e '(@ (etc ci-packages) %light-packages)' …
+(define-module (etc ci-packages)
+  #:use-module (btc packages libraries)
+  #:use-module (btc packages nodes)
+  #:export (%light-packages %node-packages %all-packages))
+
+(define %light-packages
+  (list libsecp256k1 libsecp256k1-zkp univalue))
+
+(define %node-packages
+  (list bitcoin-core bitcoin-knots))
+
+(define %all-packages
+  (append %light-packages %node-packages))
 ```
 
-Note: runner capabilities (image availability, clone depth, keyring branch fetch) can only be confirmed once the repo is on Codeberg; treat a red `authenticate` step as configuration to fix, not as a blocker for merging packages. The `build` step is the gate.
+- [ ] **Step 2: Write `etc/ci-build.sh`**
 
-- [ ] **Step 2: Write `CONTRIBUTING.md`**
+```bash
+#!/bin/sh
+# Build a named package set: etc/ci-build.sh {light|nodes|all}
+# Used by CI and equally runnable on any build box.
+set -eu
+set_name="${1:-light}"
+case "$set_name" in
+  light) var=%light-packages ;;
+  nodes) var=%node-packages ;;
+  all)   var=%all-packages ;;
+  *) echo "unknown set: $set_name (want light|nodes|all)" >&2; exit 1 ;;
+esac
+exec guix build -L . -e "(@ (etc ci-packages) $var)"
+```
+
+Make it executable: `chmod +x etc/ci-build.sh`.
+
+- [ ] **Step 3: Write `.woodpecker/check.yml`**
+
+```yaml
+# Cheap gate on every push: lint everything, build the light set.
+steps:
+  lint-and-light-build:
+    image: metacall/guix:latest
+    commands:
+      - guix lint -L . libsecp256k1 libsecp256k1-zkp univalue bitcoin-core bitcoin-knots
+      - ./etc/ci-build.sh light
+```
+
+- [ ] **Step 4: Write `.woodpecker/nodes.yml`**
+
+```yaml
+# Heavy node builds: run when the nodes module changes, or trigger
+# manually (optionally with PACKAGE_SET=light|nodes|all).
+when:
+  - event: [push, manual]
+    path:
+      include: ["btc/packages/nodes.scm", "etc/ci-packages.scm"]
+  - event: manual
+
+steps:
+  build-nodes:
+    image: metacall/guix:latest
+    commands:
+      - ./etc/ci-build.sh "${PACKAGE_SET:-nodes}"
+```
+
+Note: runner capabilities (image availability, clone depth, KVM) can only
+be confirmed once the repo is on Codeberg; treat a red heavy pipeline as
+configuration to fix, not a merge blocker. The `check.yml` gate plus a
+local/`ci-build.sh nodes` run is the acceptance bar until then.
+
+- [ ] **Step 5: Write `CONTRIBUTING.md`**
 
 ```markdown
 # Contributing
@@ -823,14 +921,14 @@ dependency archives. Vendored tiers (rust crates, explorers — later phases)
 pin dependency snapshots by hash via helper scripts in `etc/`.
 ```
 
-- [ ] **Step 3: Commit**
+- [ ] **Step 6: Commit**
 
 ```bash
-git add .woodpecker.yml CONTRIBUTING.md
-git commit -m "Add CI pipeline and contributor policy"
+git add .woodpecker etc CONTRIBUTING.md
+git commit -m "Add set-based CI pipelines and contributor policy"
 ```
 
-- [ ] **Step 4: End-to-end channel verification (phase 1 acceptance)**
+- [ ] **Step 7: End-to-end channel verification (phase 1 acceptance)**
 
 ```bash
 guix git authenticate "$(git log --reverse --format=%H -- .guix-authorizations | head -1)" \
