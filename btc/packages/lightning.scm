@@ -69,6 +69,12 @@
             (lambda* (#:key configure-flags #:allow-other-keys)
               (setenv "CC"
                       #$(cc-for-target))
+              ;; The bespoke configure passes -I$CPATH to its feature
+              ;; probes; Guix sets C_INCLUDE_PATH instead, so an unset
+              ;; CPATH yields a malformed -I flag and the zlib probe
+              ;; silently fails (gossmap-compress then miscompiles).
+              (setenv "CPATH"
+                      #$(file-append zlib "/include"))
               (apply invoke "./configure"
                      (string-append "--prefix="
                                     #$output) configure-flags))))))

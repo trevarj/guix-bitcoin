@@ -40,29 +40,37 @@ are supplied so npm can reach the registry."
                                                                        utils)))
                                         #~(begin
                                             (use-modules (guix build utils))
+                                            ;; Use the per-derivation scratch directory, NOT
+                                            ;; the literal /tmp: with --disable-chroot (CI
+                                            ;; containers) /tmp is shared between builds, and
+                                            ;; a leftover tree owned by another build user
+                                            ;; makes the copy fail with EACCES.
+                                            (define scratch
+                                              (string-append (or (getenv "TMPDIR") "/tmp")
+                                                             "/npm-vendor-app"))
                                             ;; npm wants a writable project tree and HOME.
                                             ;; Don't keep the store's read-only directory
                                             ;; permissions, or nested copies fail.
                                             (copy-recursively (string-append #$source
                                                                "/"
                                                                #$subdirectory)
-                                                              "/tmp/app"
+                                                              scratch
                                                               #:keep-permissions? #f)
-                                            (setenv "HOME" "/tmp")
+                                            (setenv "HOME" scratch)
                                             ;; Guix's nss-certs ships individual PEMs plus hashed symlinks in
                                             ;; /etc/ssl/certs (no single bundle file), so point the directory
                                             ;; variable at it rather than a *.crt bundle.
                                             (setenv "SSL_CERT_DIR"
                                                     #$(file-append nss-certs
                                                        "/etc/ssl/certs"))
-                                            (with-directory-excursion "/tmp/app"
+                                            (with-directory-excursion scratch
                                               (invoke #$(file-append node
                                                          "/bin/npm") "ci"
                                                       "--ignore-scripts"
                                                       "--no-audit" "--no-fund"))
                                             ;; Ship the installed dependency tree itself.
                                             (copy-recursively
-                                             "/tmp/app/node_modules"
+                                             (string-append scratch "/node_modules")
                                              #$output)
                                             ;; Drop npm's own bookkeeping copy of the lockfile
                                             ;; (its mtime/ordering is install-run dependent).

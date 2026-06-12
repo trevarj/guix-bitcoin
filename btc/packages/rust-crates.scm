@@ -1535,23 +1535,28 @@
 
 (define rust-windows-aarch64-gnullvm-0.52.6
   (crate-source "windows_aarch64_gnullvm" "0.52.6"
-                "1lrcq38cr2arvmz19v32qaggvj8bh1640mdm9c2fr877h0hn591j"))
+                "1lrcq38cr2arvmz19v32qaggvj8bh1640mdm9c2fr877h0hn591j"
+                #:snippet '(delete-file-recursively "lib")))
 
 (define rust-windows-aarch64-msvc-0.52.6
   (crate-source "windows_aarch64_msvc" "0.52.6"
-                "0sfl0nysnz32yyfh773hpi49b1q700ah6y7sacmjbqjjn5xjmv09"))
+                "0sfl0nysnz32yyfh773hpi49b1q700ah6y7sacmjbqjjn5xjmv09"
+                #:snippet '(delete-file-recursively "lib")))
 
 (define rust-windows-i686-gnu-0.52.6
   (crate-source "windows_i686_gnu" "0.52.6"
-                "02zspglbykh1jh9pi7gn8g1f97jh1rrccni9ivmrfbl0mgamm6wf"))
+                "02zspglbykh1jh9pi7gn8g1f97jh1rrccni9ivmrfbl0mgamm6wf"
+                #:snippet '(delete-file-recursively "lib")))
 
 (define rust-windows-i686-gnullvm-0.52.6
   (crate-source "windows_i686_gnullvm" "0.52.6"
-                "0rpdx1537mw6slcpqa0rm3qixmsb79nbhqy5fsm3q2q9ik9m5vhf"))
+                "0rpdx1537mw6slcpqa0rm3qixmsb79nbhqy5fsm3q2q9ik9m5vhf"
+                #:snippet '(delete-file-recursively "lib")))
 
 (define rust-windows-i686-msvc-0.52.6
   (crate-source "windows_i686_msvc" "0.52.6"
-                "0rkcqmp4zzmfvrrrx01260q3xkpzi6fzi2x2pgdcdry50ny4h294"))
+                "0rkcqmp4zzmfvrrrx01260q3xkpzi6fzi2x2pgdcdry50ny4h294"
+                #:snippet '(delete-file-recursively "lib")))
 
 (define rust-windows-link-0.2.0
   (crate-source "windows-link" "0.2.0"
@@ -1597,15 +1602,18 @@
 
 (define rust-windows-x86-64-gnu-0.52.6
   (crate-source "windows_x86_64_gnu" "0.52.6"
-                "0y0sifqcb56a56mvn7xjgs8g43p33mfqkd8wj1yhrgxzma05qyhl"))
+                "0y0sifqcb56a56mvn7xjgs8g43p33mfqkd8wj1yhrgxzma05qyhl"
+                #:snippet '(delete-file-recursively "lib")))
 
 (define rust-windows-x86-64-gnullvm-0.52.6
   (crate-source "windows_x86_64_gnullvm" "0.52.6"
-                "03gda7zjx1qh8k9nnlgb7m3w3s1xkysg55hkd1wjch8pqhyv5m94"))
+                "03gda7zjx1qh8k9nnlgb7m3w3s1xkysg55hkd1wjch8pqhyv5m94"
+                #:snippet '(delete-file-recursively "lib")))
 
 (define rust-windows-x86-64-msvc-0.52.6
   (crate-source "windows_x86_64_msvc" "0.52.6"
-                "1v7rb5cibyzx8vak29pdrk8nx9hycsjs4w0jgms08qk49jl6v7sq"))
+                "1v7rb5cibyzx8vak29pdrk8nx9hycsjs4w0jgms08qk49jl6v7sq"
+                #:snippet '(delete-file-recursively "lib")))
 
 (define rust-wit-bindgen-0.51.0
   (crate-source "wit-bindgen" "0.51.0"
