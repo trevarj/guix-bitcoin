@@ -78,11 +78,14 @@
                                          (string-append lib "/node_modules")))
                      (mkdir-p bin)
                      ;; Wrapper exec'ing node on the compiled entrypoint.
+                     ;; The runtime /bin/sh (bash-minimal) and node-lts are
+                     ;; retained in the package's closure via these gexp
+                     ;; references.
                      (let ((wrapper (string-append bin "/mempool-backend")))
                        (call-with-output-file wrapper
                          (lambda (port)
-                           (format port "#!~a/bin/sh~%exec ~a/bin/node ~a/dist/index.js \"$@\"~%"
-                                   #$(this-package-native-input "bash-minimal")
+                           (format port "#!~a~%exec ~a/bin/node ~a/dist/index.js \"$@\"~%"
+                                   #$(file-append bash-minimal "/bin/sh")
                                    #$node-lts lib)))
                        (chmod wrapper #o555))))))))
     (native-inputs (list node-lts bash-minimal))

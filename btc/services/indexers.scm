@@ -166,6 +166,7 @@ non-mainnet, e.g. @file{/var/lib/bitcoind/regtest/.cookie}).")
              (provision '(fulcrum))
              (requirement '(bitcoind user-processes networking))
              (documentation "Run the Fulcrum Electrum server.")
+             ;; Fulcrum takes the config file as a positional argument.
              (start #~(make-forkexec-constructor
                        (list #$(file-append package "/bin/Fulcrum") #$conf)
                        #:user "fulcrum"

@@ -22,6 +22,7 @@
   #:use-module (guix packages)
   #:use-module (guix records)
   #:use-module (ice-9 match)
+  #:use-module (srfi srfi-13)
   #:export (mempool-configuration
             mempool-configuration?
             mempool-service-type))
@@ -58,10 +59,12 @@
 @code{'electrs} or @code{'fulcrum}.")
   (db-name
    (string "mempool")
-   "MariaDB database name.")
+   "MariaDB database name.  Only ASCII letters, digits and underscore are
+allowed.")
   (db-user
    (string "mempool")
-   "MariaDB user (unix-socket authentication).")
+   "MariaDB user (unix-socket authentication).  Only ASCII letters, digits
+and underscore are allowed.")
   (http-port
    (integer 8999)
    "Backend HTTP/WebSocket API port (proxied by nginx).")
@@ -113,13 +116,32 @@
       "  }\n"
       "}\n"))))
 
+;; db-name and db-user are interpolated verbatim into the one-shot setup
+;; SQL below, so restrict them to a safe identifier charset.  Checked at
+;; service-build time (the shepherd extension runs this), so an invalid
+;; value fails `guix system build', not the running system.
+(define (valid-sql-identifier? s)
+  (and (string? s) (not (string-null? s))
+       (string-every (lambda (c)
+                       (or (char-alphabetic? c) (char-numeric? c)
+                           (char=? c #\_)))
+                     s)))
+
 ;; MariaDB: create an empty DB owned by a unix-socket-authenticated user;
 ;; the backend migrates its own schema on startup.  (gnu services
 ;; databases) offers no declarative DB-provisioning extension, so do it in a
 ;; one-shot Shepherd service running the mariadb client as the local root
 ;; (socket authentication).
+;;
+;; Note: this setup only ever creates and grants; it never revokes.  If
+;; db-user is later renamed, the old user's privileges on the database are
+;; not removed and must be cleaned up manually.
 (define (mempool-db-setup-service config)
   (match-record config <mempool-configuration> (db-name db-user)
+    (unless (and (valid-sql-identifier? db-name)
+                 (valid-sql-identifier? db-user))
+      (error "mempool: db-name and db-user must match [A-Za-z0-9_]+"
+             db-name db-user))
     (shepherd-service
      (provision '(mempool-db-setup))
      (requirement '(mysql))
@@ -190,6 +212,10 @@
            (root (file-append frontend-package
                               "/share/mempool-frontend/mempool/browser"))
            (try-files (list "$uri" "$uri/" "/index.html"))
+           ;; The proxy upstream is intentionally pinned to
+           ;; 127.0.0.1:http-port: the backend binds loopback only.  The
+           ;; electrum/bitcoind hosts are configurable, but the mempool
+           ;; backend itself is expected to run locally.
            (locations
             (list (nginx-location-configuration
                    (uri "/api/v1/ws")
