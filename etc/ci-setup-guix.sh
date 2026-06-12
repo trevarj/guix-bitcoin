@@ -16,10 +16,20 @@ PINNED_COMMIT=$(sed -n 's/.*(commit "\([0-9a-f]\{40\}\)").*/\1/p' etc/ci-guix-ch
 
 say() { printf '\033[1;34m[ci-setup-guix]\033[0m %s\n' "$*"; }
 
+ensure_system_deps() {
+    # netbase provides /etc/services, without which guix's substituter
+    # fails name resolution ("Servname not supported for ai_socktype")
+    # and silently builds the world from bootstrap instead.
+    if ! { command -v wget && command -v xz && command -v pgrep && \
+           [ -e /etc/services ]; } >/dev/null 2>&1; then
+        say "installing system deps (wget xz netbase procps)"
+        apt-get update -qq
+        apt-get install -y -qq wget xz-utils netbase procps ca-certificates
+    fi
+}
+
 install_binary() {
     say "installing Guix binary tarball ${GUIX_BINARY_VERSION}"
-    command -v wget >/dev/null || { apt-get update -qq; apt-get install -y -qq wget xz-utils; }
-    command -v xz   >/dev/null || { apt-get update -qq; apt-get install -y -qq xz-utils; }
     wget -q -O /tmp/guix-binary.tar.xz "$GUIX_TARBALL_URL"
     # The tarball contains gnu/ and var/guix at its root.
     rm -rf /tmp/guix-binary; mkdir /tmp/guix-binary
@@ -85,6 +95,7 @@ pull_if_needed() {
 
 case "${1:-ensure}" in
     ensure)
+        ensure_system_deps
         [ -d /gnu ] && [ -d /var/guix ] || install_binary
         ensure_users
         start_daemon
