@@ -22,6 +22,7 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: debian:bookworm
+      options: --security-opt seccomp=unconfined
     timeout-minutes: 350
     steps:
       - uses: actions/checkout@v4
