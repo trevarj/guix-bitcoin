@@ -1,0 +1,53 @@
+# GitHub Actions mirror of .forgejo/workflows/check.yml.
+# Free public runners: 4 vCPU / 16 GB RAM / ~14 GB SSD / 6 h job limit.
+# Jobs run in a Debian container as root so etc/ci-setup-guix.sh and the
+# cache paths behave exactly like on Forgejo runners.
+name: check
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+jobs:
+  setup-guix:
+    runs-on: ubuntu-latest
+    container:
+      image: debian:bookworm
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - id: guix-cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            /gnu
+            /var/guix
+            /root/.config/guix
+            /root/.cache/guix
+          key: guix-${{ hashFiles('etc/ci-guix-channels.scm') }}
+      - name: Install and pull Guix (cache miss only)
+        if: steps.guix-cache.outputs.cache-hit != 'true'
+        run: ./etc/ci-setup-guix.sh ensure
+
+  lint-and-light:
+    needs: setup-guix
+    runs-on: ubuntu-latest
+    container:
+      image: debian:bookworm
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/cache/restore@v4
+        with:
+          path: |
+            /gnu
+            /var/guix
+            /root/.config/guix
+            /root/.cache/guix
+          key: guix-${{ hashFiles('etc/ci-guix-channels.scm') }}
+      - name: Ensure Guix (no-op on cache hit)
+        run: ./etc/ci-setup-guix.sh ensure
+      - name: Lint all channel packages
+        run: ./etc/ci-build.sh lint
+      - name: Build light package set
+        run: ./etc/ci-build.sh light
