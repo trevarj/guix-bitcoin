@@ -1,0 +1,5 @@
+;; -*- scheme -*-
+(channel
+ (version 0)
+ (directory ".")
+ (news-file "news.txt"))

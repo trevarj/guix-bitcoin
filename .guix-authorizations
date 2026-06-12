@@ -1,0 +1,5 @@
+;; -*- scheme -*-
+(authorizations
+ (version 0)
+ (("A6C2 0D0C 2AD8 38F9 4907  0EA3 A52D 6879 4EBE D758"
+   (name "trevarj"))))
