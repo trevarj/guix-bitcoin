@@ -111,16 +111,10 @@ pull_if_needed() {
         say "guix already at pinned commit ${PINNED_COMMIT}"
         return
     fi
-    # Skip the expensive pull entirely when the installed (nightly) guix
-    # is recent enough to load the channel's modules — the channel only
-    # needs current-master APIs, not one exact commit, for CI builds.
-    if guix repl -L . >/dev/null 2>&1 <<'EOF'
-(use-modules (etc ci-packages) (btc packages rust-crates))
-EOF
-    then
-        say "installed guix loads the channel; skipping guix pull"
-        return
-    fi
+    # Always pull to the exact pinned commit: the FOD-built artifacts
+    # (rust-gbt napi addon, vendored trees) are only bit-reproducible
+    # when CI's toolchain matches the maintainer's guix, so a merely
+    # "recent enough" nightly is not sufficient.
     say "guix pull to pinned commit ${PINNED_COMMIT} (one-time; cached afterwards)"
     # libgit2's TLS transport reliably fails (EAGAIN) on the large guix
     # clone in CI containers; clone with system git instead and pull from
