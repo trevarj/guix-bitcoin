@@ -3,7 +3,9 @@
 when:
   - event: [push]
     path:
-      include: ["btc/packages/nodes.scm", "etc/ci-packages.scm"]
+      include: ["btc/packages/nodes.scm", "btc/packages/indexers.scm",
+                "btc/packages/lightning.scm", "btc/packages/wallets.scm",
+                "etc/ci-packages.scm"]
   - event: manual
 
 steps:

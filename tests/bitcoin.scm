@@ -14,9 +14,11 @@
   #:use-module (gnu system vm)
   #:use-module (gnu services)
   #:use-module (btc services bitcoin)
+  #:use-module (btc services indexers)
   #:use-module (btc packages nodes)
   #:use-module (guix gexp)
-  #:export (%test-bitcoin-node))
+  #:export (%test-bitcoin-node
+            %test-electrs))
 
 (define (run-bitcoin-node-test)
   "Boot a VM running bitcoin-node-service-type on regtest and exercise the
@@ -83,3 +85,79 @@ RPC interface."
    (description "Boot a VM with bitcoin-node-service-type on regtest and
 exercise the RPC interface.")
    (value (run-bitcoin-node-test))))
+
+(define (run-electrs-test)
+  "Boot a VM running bitcoin-node-service-type plus electrs-service-type on
+regtest and check that electrs serves the Electrum protocol."
+  (define os
+    (marionette-operating-system
+     (simple-operating-system
+      (service bitcoin-node-service-type
+               (bitcoin-node-configuration
+                (network 'regtest)
+                (txindex? #t)))
+      (service electrs-service-type
+               (electrs-configuration
+                (network 'regtest)
+                (daemon-rpc-address "127.0.0.1:18443")
+                (daemon-p2p-address "127.0.0.1:18444")
+                (electrum-rpc-address "127.0.0.1:50001"))))
+     #:imported-modules '((gnu services herd))))
+
+  (define vm
+    (virtual-machine
+     (operating-system os)
+     (memory-size 1024)))
+
+  (define test
+    (with-imported-modules '((gnu build marionette))
+      #~(begin
+          (use-modules (gnu build marionette)
+                       (srfi srfi-64))
+
+          (define marionette (make-marionette (list #$vm)))
+
+          (test-runner-current (system-test-runner #$output))
+          (test-begin "electrs")
+
+          (test-assert "bitcoind service is running"
+            (marionette-eval
+             '(begin
+                (use-modules (gnu services herd))
+                (wait-for-service 'bitcoind))
+             marionette))
+
+          (test-assert "electrs service is running"
+            (marionette-eval
+             '(begin
+                (use-modules (gnu services herd))
+                (wait-for-service 'electrs))
+             marionette))
+
+          (test-assert "electrum port accepts connections"
+            (marionette-eval
+             '(let loop ((tries 60))
+                (let ((sock (socket PF_INET SOCK_STREAM 0)))
+                  (catch #t
+                    (lambda ()
+                      (connect sock AF_INET
+                               (inet-pton AF_INET "127.0.0.1") 50001)
+                      (close-port sock)
+                      #t)
+                    (lambda _
+                      (close-port sock)
+                      (if (zero? tries) #f
+                          (begin (sleep 2) (loop (- tries 1))))))))
+             marionette))
+
+          (test-end))))
+
+  (gexp->derivation "electrs-test" test))
+
+(define %test-electrs
+  (system-test
+   (name "electrs")
+   (description "Boot a VM with bitcoin-node-service-type and
+electrs-service-type on regtest and check that electrs serves the Electrum
+protocol on its TCP port.")
+   (value (run-electrs-test))))
