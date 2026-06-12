@@ -53,6 +53,12 @@
       ;; keep the core daemon pure-C for now.  Valgrind is autodetected
       ;; and simply absent here, so no explicit --disable-valgrind.
       #~(list "--disable-rust")
+      ;; With no .git present the Makefile cannot derive the version for
+      ;; version_gen.h; supply it explicitly.  `version' is not in scope
+      ;; inside the gexp, so pull it from the package via this-package.
+      #:make-flags
+      #~(list (string-append "VERSION=v"
+                             #$(package-version this-package)))
       #:phases
       #~(modify-phases %standard-phases
           ;; Bespoke ./configure rejects standard GNU flags.

@@ -31,22 +31,21 @@
     (file-name (git-file-name "mempool" %mempool-version))
     (sha256 (base32 "04g67zmc5ppiaib7rp4csn0kwg1yrph9dkaklznyk0bhmjxshbrz"))))
 
-(define %backend-npm-cache
-  (npm-offline-cache #:name "mempool-backend"
-                     #:source %mempool-source
-                     #:subdirectory "backend"
-                     #:hash
-                     "0px1x252rxwrjslqh07123x67rnpv5z5afs8wq9dyhqy0fildc19"
-                     #:node node-lts))
+;; FIXME: real hash from first build.
+(define %backend-node-modules
+  (npm-vendored-modules #:name "mempool-backend"
+   #:source %mempool-source
+   #:subdirectory "backend"
+   #:hash "0000000000000000000000000000000000000000000000000000"
+   #:node node-lts))
 
 ;; FIXME: real hash from first build.
-(define %frontend-npm-cache
-  (npm-offline-cache #:name "mempool-frontend"
-                     #:source %mempool-source
-                     #:subdirectory "frontend"
-                     #:hash
-                     "0000000000000000000000000000000000000000000000000000"
-                     #:node node-lts))
+(define %frontend-node-modules
+  (npm-vendored-modules #:name "mempool-frontend"
+   #:source %mempool-source
+   #:subdirectory "frontend"
+   #:hash "0000000000000000000000000000000000000000000000000000"
+   #:node node-lts))
 
 (define-public mempool-backend
   (package
@@ -65,14 +64,9 @@
             (lambda _
               (setenv "HOME" "/tmp")
               (with-directory-excursion "backend"
-                (invoke #$(file-append node-lts "/bin/npm")
-                        "ci"
-                        "--offline"
-                        "--ignore-scripts"
-                        "--no-audit"
-                        "--no-fund"
-                        (string-append "--cache="
-                                       #$%backend-npm-cache))
+                ;; Drop in the pre-vendored, normalized dependency tree
+                ;; instead of running 'npm ci' against a cache.
+                (copy-recursively #$%backend-node-modules "node_modules")
                 (invoke #$(file-append node-lts "/bin/npm") "run" "build"))))
           (replace 'install
             (lambda _
@@ -128,14 +122,9 @@ serves the explorer's REST and WebSocket APIs.")
               (setenv "SKIP_SYNC" "1")
               (setenv "DRY_RUN" "1")
               (with-directory-excursion "frontend"
-                (invoke #$(file-append node-lts "/bin/npm")
-                        "ci"
-                        "--offline"
-                        "--ignore-scripts"
-                        "--no-audit"
-                        "--no-fund"
-                        (string-append "--cache="
-                                       #$%frontend-npm-cache))
+                ;; Drop in the pre-vendored, normalized dependency tree
+                ;; instead of running 'npm ci' against a cache.
+                (copy-recursively #$%frontend-node-modules "node_modules")
                 (invoke #$(file-append node-lts "/bin/npm") "run" "build"))))
           (replace 'install
             (lambda _
