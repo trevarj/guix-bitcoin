@@ -60,7 +60,7 @@
                  "dnspython"))))
           (add-before 'check 'set-home
             (lambda _
-               ;3 tests run mkdir
+              ;; 3 tests run mkdir
               (setenv "HOME" "/tmp"))))))
     (native-inputs (list python-pytest python-setuptools))
     (inputs (list electrum-aionostr
@@ -107,7 +107,16 @@ download the full block chain.")
      ;; The test suite drives hardware-wallet simulators that need network
      ;; and vendored firmware; run only the unit-testable subset.
      (list
-      #:tests? #f))
+      #:tests? #f
+      #:phases
+      #~(modify-phases %standard-phases
+          (add-after 'unpack 'use-poetry-core
+            (lambda _
+              ;; The old "poetry.masonry.api" backend lives in poetry-core
+              ;; as "poetry.core.masonry.api".
+              (substitute* "pyproject.toml"
+                (("poetry\\.masonry\\.api")
+                 "poetry.core.masonry.api")))))))
     (native-inputs (list python-poetry-core))
     ;; Runtime dependencies per HWI's pyproject.toml (the Qt GUI extra and
     ;; its optional pyside2 dependency are not packaged here).

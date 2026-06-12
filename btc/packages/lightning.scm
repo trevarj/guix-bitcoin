@@ -22,6 +22,7 @@
   #:use-module (gnu packages crypto)
   #:use-module (gnu packages gettext)
   #:use-module (gnu packages golang)
+  #:use-module (gnu packages markup)
   #:use-module (gnu packages multiprecision)
   #:use-module (gnu packages pkg-config)
   #:use-module (gnu packages python)
@@ -67,6 +68,7 @@
                          libtool
                          gettext-minimal
                          jq
+                         lowdown
                          pkg-config
                          python
                          python-mako

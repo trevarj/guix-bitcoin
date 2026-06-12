@@ -31,13 +31,12 @@
     (file-name (git-file-name "mempool" %mempool-version))
     (sha256 (base32 "04g67zmc5ppiaib7rp4csn0kwg1yrph9dkaklznyk0bhmjxshbrz"))))
 
-;; FIXME: real hash from first build.
 (define %backend-npm-cache
   (npm-offline-cache #:name "mempool-backend"
                      #:source %mempool-source
                      #:subdirectory "backend"
                      #:hash
-                     "0000000000000000000000000000000000000000000000000000"
+                     "0px1x252rxwrjslqh07123x67rnpv5z5afs8wq9dyhqy0fildc19"
                      #:node node-lts))
 
 ;; FIXME: real hash from first build.

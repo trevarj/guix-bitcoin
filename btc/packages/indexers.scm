@@ -80,7 +80,6 @@ Electrum.")
     (arguments
      (list
       #:install-source? #f
-      #:cargo-inputs (lookup-cargo-inputs 'electrs)
       #:phases
       #~(modify-phases %standard-phases
           (add-before 'build 'use-system-rocksdb
@@ -91,7 +90,8 @@ Electrum.")
                       #$(file-append rocksdb "/lib"))
               (setenv "ROCKSDB_INCLUDE_DIR"
                       #$(file-append rocksdb "/include")))))))
-    (inputs (list rocksdb))
+    (inputs (cons rocksdb
+                  (lookup-cargo-inputs 'electrs)))
     (home-page "https://github.com/romanz/electrs")
     (synopsis "Efficient re-implementation of Electrum Server in Rust")
     (description

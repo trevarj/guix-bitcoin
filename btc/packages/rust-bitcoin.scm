@@ -25,8 +25,8 @@
     (build-system cargo-build-system)
     (arguments
      (list
-      #:install-source? #t
-      #:cargo-inputs (lookup-cargo-inputs 'rust-bitcoin)))
+      #:install-source? #t))
+    (inputs (lookup-cargo-inputs 'rust-bitcoin))
     (home-page "https://github.com/rust-bitcoin/rust-bitcoin")
     (synopsis "Rust library for Bitcoin data structures and protocols")
     (description
@@ -45,8 +45,8 @@ addresses, scripts and PSBTs.")
     (build-system cargo-build-system)
     (arguments
      (list
-      #:install-source? #t
-      #:cargo-inputs (lookup-cargo-inputs 'rust-bitcoin-hashes)))
+      #:install-source? #t))
+    (inputs (lookup-cargo-inputs 'rust-bitcoin-hashes))
     (home-page "https://github.com/rust-bitcoin/rust-bitcoin")
     (synopsis "Hash types used by rust-bitcoin")
     (description
@@ -65,8 +65,8 @@ hashing of Bitcoin data structures.")
     (build-system cargo-build-system)
     (arguments
      (list
-      #:install-source? #t
-      #:cargo-inputs (lookup-cargo-inputs 'rust-secp256k1)))
+      #:install-source? #t))
+    (inputs (lookup-cargo-inputs 'rust-secp256k1))
     (home-page "https://github.com/rust-bitcoin/rust-secp256k1")
     (synopsis "Rust bindings to libsecp256k1")
     (description
@@ -85,8 +85,8 @@ signing and verification, Schnorr signatures and key management.")
     (build-system cargo-build-system)
     (arguments
      (list
-      #:install-source? #t
-      #:cargo-inputs (lookup-cargo-inputs 'rust-miniscript)))
+      #:install-source? #t))
+    (inputs (lookup-cargo-inputs 'rust-miniscript))
     (home-page "https://github.com/rust-bitcoin/rust-miniscript")
     (synopsis "Miniscript: a structured representation of Bitcoin Script")
     (description
@@ -106,8 +106,8 @@ descriptors.")
     (build-system cargo-build-system)
     (arguments
      (list
-      #:install-source? #t
-      #:cargo-inputs (lookup-cargo-inputs 'rust-bdk-wallet)))
+      #:install-source? #t))
+    (inputs (lookup-cargo-inputs 'rust-bdk-wallet))
     (home-page "https://github.com/bitcoindevkit/bdk")
     (synopsis "Bitcoin Dev Kit descriptor-based wallet library")
     (description
