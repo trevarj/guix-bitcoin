@@ -1,0 +1,13 @@
+# Heavy node builds: run when the nodes module changes, or trigger
+# manually (optionally with PACKAGE_SET=light|nodes|all).
+when:
+  - event: [push, manual]
+    path:
+      include: ["btc/packages/nodes.scm", "etc/ci-packages.scm"]
+  - event: manual
+
+steps:
+  build-nodes:
+    image: metacall/guix:latest
+    commands:
+      - ./etc/ci-build.sh "${PACKAGE_SET:-nodes}"
