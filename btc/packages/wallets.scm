@@ -13,7 +13,8 @@
   #:use-module (guix git-download)
   #:use-module (guix gexp)
   #:use-module (guix build-system pyproject)
-  #:use-module ((guix licenses) #:prefix license:)
+  #:use-module ((guix licenses)
+                #:prefix license:)
   #:use-module (gnu packages aidc)
   #:use-module (gnu packages check)
   #:use-module (gnu packages finance)
@@ -30,14 +31,15 @@
   (package
     (name "electrum")
     (version "4.7.2")
-    (source (origin
-              (method git-fetch)
-              (uri (git-reference
-                    (url "https://github.com/spesmilo/electrum")
-                    (commit version)))
-              (file-name (git-file-name name version))
-              (sha256 (base32
-                       "05y3w9jhpfxd7frzlilqvsfggrgfzcml2spc2qb5xx9j4q62hnmx"))))
+    (source
+     (origin
+       (method git-fetch)
+       (uri (git-reference
+             (url "https://github.com/spesmilo/electrum")
+             (commit version)))
+       (file-name (git-file-name name version))
+       (sha256
+        (base32 "05y3w9jhpfxd7frzlilqvsfggrgfzcml2spc2qb5xx9j4q62hnmx"))))
     (build-system pyproject-build-system)
     ;; Arguments and inputs adapted verbatim from upstream Guix's electrum
     ;; (gnu/packages/finance.scm), which is at the same 4.7.2 version.
@@ -45,36 +47,39 @@
      (list
       ;; Either pycryptodomex or cryptography must be available.  This package
       ;; uses python-cryptography, but the test checks for cryptodomex anyway.
-      #:test-flags #~(list "-k" "not test_pycryptodomex_is_available")
+      #:test-flags
+      #~(list "-k" "not test_pycryptodomex_is_available")
       #:phases
       #~(modify-phases %standard-phases
           (add-after 'unpack 'relax-deps
             (lambda _
               (substitute* "contrib/requirements/requirements.txt"
-                (("attrs.*") "attrs")
-                (("dnspython.*") "dnspython"))))
+                (("attrs.*")
+                 "attrs")
+                (("dnspython.*")
+                 "dnspython"))))
           (add-before 'check 'set-home
-            (lambda _                   ; 3 tests run mkdir
+            (lambda _
+               ;3 tests run mkdir
               (setenv "HOME" "/tmp"))))))
     (native-inputs (list python-pytest python-setuptools))
-    (inputs
-     (list electrum-aionostr
-           python-aiohttp
-           python-aiohttp-socks
-           python-aiorpcx
-           python-attrs
-           python-certifi
-           python-cryptography
-           python-dnspython
-           python-electrum-ecc
-           python-hidapi
-           python-jsonpatch
-           python-protobuf
-           python-pyaes
-           python-pyqt-6
-           python-qdarkstyle
-           python-qrcode
-           zbar))
+    (inputs (list electrum-aionostr
+                  python-aiohttp
+                  python-aiohttp-socks
+                  python-aiorpcx
+                  python-attrs
+                  python-certifi
+                  python-cryptography
+                  python-dnspython
+                  python-electrum-ecc
+                  python-hidapi
+                  python-jsonpatch
+                  python-protobuf
+                  python-pyaes
+                  python-pyqt-6
+                  python-qdarkstyle
+                  python-qrcode
+                  zbar))
     (home-page "https://electrum.org/")
     (synopsis "Lightweight Bitcoin wallet")
     (description
@@ -88,19 +93,21 @@ download the full block chain.")
   (package
     (name "hwi")
     (version "3.2.0")
-    (source (origin
-              (method git-fetch)
-              (uri (git-reference
-                    (url "https://github.com/bitcoin-core/HWI")
-                    (commit version)))
-              (file-name (git-file-name name version))
-              (sha256 (base32
-                       "0k0cwyaldpccl8w9vpr8hcm440y34c1rqhs8rsnzwd47lv96vlxs"))))
+    (source
+     (origin
+       (method git-fetch)
+       (uri (git-reference
+             (url "https://github.com/bitcoin-core/HWI")
+             (commit version)))
+       (file-name (git-file-name name version))
+       (sha256
+        (base32 "0k0cwyaldpccl8w9vpr8hcm440y34c1rqhs8rsnzwd47lv96vlxs"))))
     (build-system pyproject-build-system)
     (arguments
      ;; The test suite drives hardware-wallet simulators that need network
      ;; and vendored firmware; run only the unit-testable subset.
-     (list #:tests? #f))
+     (list
+      #:tests? #f))
     (native-inputs (list python-poetry-core))
     ;; Runtime dependencies per HWI's pyproject.toml (the Qt GUI extra and
     ;; its optional pyside2 dependency are not packaged here).

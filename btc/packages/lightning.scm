@@ -14,7 +14,8 @@
   #:use-module (guix gexp)
   #:use-module (guix utils)
   #:use-module (guix build-system gnu)
-  #:use-module ((guix licenses) #:prefix license:)
+  #:use-module ((guix licenses)
+                #:prefix license:)
   #:use-module (gnu packages autotools)
   #:use-module (gnu packages base)
   #:use-module (gnu packages compression)
@@ -33,33 +34,43 @@
   (package
     (name "core-lightning")
     (version "26.06.1")
-    (source (origin
-              (method git-fetch)
-              (uri (git-reference
-                    (url "https://github.com/ElementsProject/lightning")
-                    (commit (string-append "v" version))))
-              (file-name (git-file-name name version))
-              (sha256 (base32
-                       "059jbwy0n3vgjr9m519g23zvb95mp5aaasl72qvcxa27f20d4c23"))))
+    (source
+     (origin
+       (method git-fetch)
+       (uri (git-reference
+             (url "https://github.com/ElementsProject/lightning")
+             (commit (string-append "v" version))))
+       (file-name (git-file-name name version))
+       (sha256
+        (base32 "059jbwy0n3vgjr9m519g23zvb95mp5aaasl72qvcxa27f20d4c23"))))
     (build-system gnu-build-system)
     (arguments
-     (list #:tests? #f                  ;test suite needs running bitcoind
-           #:configure-flags
-           ;; Rust plugins (cln-grpc, clnrest, …) pull a full cargo tree;
-           ;; keep the core daemon pure-C for now.  Valgrind is autodetected
-           ;; and simply absent here, so no explicit --disable-valgrind.
-           #~(list "--disable-rust")
-           #:phases
-           #~(modify-phases %standard-phases
-               ;; Bespoke ./configure rejects standard GNU flags.
-               (replace 'configure
-                 (lambda* (#:key configure-flags #:allow-other-keys)
-                   (setenv "CC" #$(cc-for-target))
-                   (apply invoke "./configure"
-                          (string-append "--prefix=" #$output)
-                          configure-flags))))))
-    (native-inputs (list autoconf automake libtool gettext-minimal jq
-                         pkg-config python python-mako which))
+     (list
+      #:tests? #f ;test suite needs running bitcoind
+      #:configure-flags
+      ;; Rust plugins (cln-grpc, clnrest, …) pull a full cargo tree;
+      ;; keep the core daemon pure-C for now.  Valgrind is autodetected
+      ;; and simply absent here, so no explicit --disable-valgrind.
+      #~(list "--disable-rust")
+      #:phases
+      #~(modify-phases %standard-phases
+          ;; Bespoke ./configure rejects standard GNU flags.
+          (replace 'configure
+            (lambda* (#:key configure-flags #:allow-other-keys)
+              (setenv "CC"
+                      #$(cc-for-target))
+              (apply invoke "./configure"
+                     (string-append "--prefix="
+                                    #$output) configure-flags))))))
+    (native-inputs (list autoconf
+                         automake
+                         libtool
+                         gettext-minimal
+                         jq
+                         pkg-config
+                         python
+                         python-mako
+                         which))
     (inputs (list gmp libsodium sqlite zlib))
     (home-page "https://github.com/ElementsProject/lightning")
     (synopsis "Lightning Network implementation in C")
@@ -76,51 +87,56 @@ extensions.")
          ;; runs once, this all-zeros placeholder makes the build fail with
          ;; the actual hash to splice in here (standard Guix FOD workflow).
          (vendored-hash "0000000000000000000000000000000000000000000000000000")
-         (plain-source
-          (origin
-            (method git-fetch)
-            (uri (git-reference
-                  (url "https://github.com/lightningnetwork/lnd")
-                  (commit (string-append "v" version))))
-            (file-name (git-file-name "lnd" version))
-            (sha256 (base32
-                     "01fkylbifb7snlk49r1q7r7ywky0v3iyyiw3kl0b2a42ax9b4z0h")))))
+         (plain-source (origin
+                         (method git-fetch)
+                         (uri (git-reference
+                               (url "https://github.com/lightningnetwork/lnd")
+                               (commit (string-append "v" version))))
+                         (file-name (git-file-name "lnd" version))
+                         (sha256 (base32
+                                  "01fkylbifb7snlk49r1q7r7ywky0v3iyyiw3kl0b2a42ax9b4z0h")))))
     (package
       (name "lnd")
       (version version)
       ;; The source is the plain checkout with a populated vendor/ directory,
       ;; produced by the fixed-output 'go mod vendor' helper (origins compose
       ;; here because computed-file is a valid file-like source).
-      (source (go-mod-vendored-source
-               #:name "lnd"
-               #:source plain-source
-               #:hash vendored-hash
-               #:go go-1.25))
+      (source
+       (go-mod-vendored-source #:name "lnd"
+                               #:source plain-source
+                               #:hash vendored-hash
+                               #:go go-1.25))
       (build-system gnu-build-system)
       (arguments
-       (list #:tests? #f
-             #:phases
-             #~(modify-phases %standard-phases
-                 (delete 'configure)
-                 (replace 'build
-                   (lambda _
-                     (setenv "HOME" "/tmp")
-                     (setenv "GOFLAGS" "-mod=vendor -trimpath")
-                     (setenv "CGO_ENABLED" "0")
-                     ;; Upstream RELEASE_TAGS (make/release_flags.mk).
-                     (invoke "go" "build" "-o" "lnd-bin/"
-                             "-tags"
-                             (string-append
-                              "autopilotrpc signrpc walletrpc chainrpc "
-                              "invoicesrpc watchtowerrpc neutrinorpc "
-                              "monitoring peersrpc kvdb_postgres kvdb_etcd "
-                              "kvdb_sqlite")
-                             "./cmd/lnd" "./cmd/lncli")))
-                 (replace 'install
-                   (lambda _
-                     (for-each (lambda (f)
-                                 (install-file f (string-append #$output "/bin")))
-                               '("lnd-bin/lnd" "lnd-bin/lncli")))))))
+       (list
+        #:tests? #f
+        #:phases
+        #~(modify-phases %standard-phases
+            (delete 'configure)
+            (replace 'build
+              (lambda _
+                (setenv "HOME" "/tmp")
+                (setenv "GOFLAGS" "-mod=vendor -trimpath")
+                (setenv "CGO_ENABLED" "0")
+                ;; Upstream RELEASE_TAGS (make/release_flags.mk).
+                (invoke "go"
+                        "build"
+                        "-o"
+                        "lnd-bin/"
+                        "-tags"
+                        (string-append
+                         "autopilotrpc signrpc walletrpc chainrpc "
+                         "invoicesrpc watchtowerrpc neutrinorpc "
+                         "monitoring peersrpc kvdb_postgres kvdb_etcd "
+                         "kvdb_sqlite")
+                        "./cmd/lnd"
+                        "./cmd/lncli")))
+            (replace 'install
+              (lambda _
+                (for-each (lambda (f)
+                            (install-file f
+                                          (string-append #$output "/bin")))
+                          '("lnd-bin/lnd" "lnd-bin/lncli")))))))
       (native-inputs (list go-1.25))
       (home-page "https://github.com/lightningnetwork/lnd")
       (synopsis "Lightning Network daemon in Go")

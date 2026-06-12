@@ -8,14 +8,13 @@
   #:use-module (btc packages lightning)
   #:use-module (btc packages rust-bitcoin)
   #:use-module (btc packages explorers)
-  #:export (%light-packages
-            %node-packages
-            %indexer-packages
-            %wallet-packages
-            %lightning-packages
-            %rust-packages
-            %explorer-packages
-            %all-packages))
+  #:export (%light-packages %node-packages
+                            %indexer-packages
+                            %wallet-packages
+                            %lightning-packages
+                            %rust-packages
+                            %explorer-packages
+                            %all-packages))
 
 (define %light-packages
   (list libsecp256k1 libsecp256k1-zkp univalue))
@@ -33,13 +32,17 @@
   (list core-lightning lnd))
 
 (define %rust-packages
-  (list rust-bitcoin rust-bitcoin-hashes rust-secp256k1
-        rust-miniscript rust-bdk-wallet))
+  (list rust-bitcoin rust-bitcoin-hashes rust-secp256k1 rust-miniscript
+        rust-bdk-wallet))
 
 (define %explorer-packages
   (list mempool-backend mempool-frontend))
 
 (define %all-packages
-  (append %light-packages %node-packages %indexer-packages
-          %wallet-packages %lightning-packages %rust-packages
+  (append %light-packages
+          %node-packages
+          %indexer-packages
+          %wallet-packages
+          %lightning-packages
+          %rust-packages
           %explorer-packages))
