@@ -56,7 +56,10 @@
             (lambda _
               (invoke "python3" "./test/functional/test_runner.py"
                       (string-append "--jobs="
-                                     (number->string (parallel-job-count)))))))))
+                                     (number->string (parallel-job-count)))
+                      ;; These two need IPv6 (::1), which build
+                      ;; environments and CI containers lack.
+                      "--exclude=interface_bitcoin_cli.py,rpc_bind.py --ipv6"))))))
     (native-inputs (list pkg-config python util-linux))
     (inputs (list boost capnproto libevent sqlite zeromq))
     (home-page "https://bitcoincore.org/")
@@ -109,7 +112,10 @@ ZeroMQ notification support, without the GUI.")
             (lambda _
               (invoke "python3" "./test/functional/test_runner.py"
                       (string-append "--jobs="
-                                     (number->string (parallel-job-count)))))))))
+                                     (number->string (parallel-job-count)))
+                      ;; These two need IPv6 (::1), which build
+                      ;; environments and CI containers lack.
+                      "--exclude=interface_bitcoin_cli.py,rpc_bind.py --ipv6"))))))
     (native-inputs (list pkg-config python util-linux))
     (inputs (list boost libevent miniupnpc sqlite zeromq))
     (home-page "https://bitcoinknots.org/")
