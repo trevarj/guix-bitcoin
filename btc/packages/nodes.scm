@@ -20,6 +20,7 @@
   #:use-module (gnu packages linux)
   #:use-module (gnu packages networking)
   #:use-module (gnu packages pkg-config)
+  #:use-module (gnu packages serialization)
   #:use-module (gnu packages python)
   #:use-module (gnu packages sqlite)
   #:use-module (gnu packages upnp))
@@ -57,7 +58,7 @@
                       (string-append "--jobs="
                                      (number->string (parallel-job-count)))))))))
     (native-inputs (list pkg-config python util-linux))
-    (inputs (list boost libevent sqlite zeromq))
+    (inputs (list boost capnproto libevent sqlite zeromq))
     (home-page "https://bitcoincore.org/")
     (synopsis "Bitcoin full-node reference implementation")
     (description
