@@ -61,7 +61,7 @@ RPC interface."
                                  #$(file-append bitcoin-core "/bin/bitcoin-cli")
                                  " -regtest -datadir=/var/lib/bitcoind"
                                  " getblockchaininfo"))))
-                  (cond ((zero? status) #t)
+                  (cond ((eqv? 0 (status:exit-val status)) #t)
                         ((zero? tries) #f)
                         (else (sleep 2) (loop (- tries 1))))))
              marionette))

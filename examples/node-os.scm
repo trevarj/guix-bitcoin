@@ -6,6 +6,7 @@
 (operating-system
   (host-name "btc-node")
   (timezone "Etc/UTC")
+  ;; Adjust device names for your machine; this example assumes legacy BIOS + /dev/sda.
   (bootloader (bootloader-configuration
                (bootloader grub-bootloader)
                (targets '("/dev/sda"))))

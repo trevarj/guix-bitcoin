@@ -23,8 +23,6 @@
             bitcoin-node-configuration?
             bitcoin-node-service-type))
 
-(define (string-or-empty? x) (string? x))
-
 (define-configuration/no-serialization bitcoin-node-configuration
   (package
    (file-like bitcoin-core)
@@ -35,7 +33,9 @@
 @code{'regtest}.")
   (data-directory
    (string "/var/lib/bitcoind")
-   "Directory holding the block chain, wallets and RPC cookie.")
+   "Directory holding the block chain, wallets and RPC cookie.  Pointing
+this at an existing directory does not change ownership of its contents;
+only the directory itself is created and owned at activation.")
   (prune
    (integer 0)
    "Prune target in MiB; @code{0} disables pruning, @code{1} allows manual
@@ -47,6 +47,11 @@ pruning).")
   (rpc-bind
    (string "127.0.0.1")
    "Address the RPC server listens on.")
+  (rpc-allow-ip
+   (list-of-strings '("127.0.0.1"))
+   "Client addresses/subnets allowed to use the RPC interface, one
+@code{rpcallowip} line each (e.g. @code{\"192.168.1.0/24\"}).  Distinct
+from @code{rpc-bind}, which only controls the listening address.")
   (rpc-auth
    (string "")
    "Optional @code{rpcauth} line (salted hash, as produced by upstream's
@@ -61,7 +66,10 @@ used; the cookie is group-readable by the @code{bitcoin} group.")
    "Optional ZMQ endpoint for raw transaction notifications.")
   (extra-config
    (list-of-strings '())
-   "Raw lines appended verbatim to @file{bitcoin.conf}."))
+   "Raw lines appended verbatim to @file{bitcoin.conf}.  Lines are placed
+in the global section of @file{bitcoin.conf} (before the per-network
+section header), so network-scoped options must include their own section
+header within these lines."))
 
 (define (network->chain-option network)
   (match network
@@ -79,8 +87,10 @@ used; the cookie is group-readable by the @code{bitcoin} group.")
 
 (define (bitcoin-node-config-file config)
   (match-record config <bitcoin-node-configuration>
-    (network prune txindex? rpc-bind rpc-auth
+    (network prune txindex? rpc-bind rpc-allow-ip rpc-auth
      zmq-pub-raw-block zmq-pub-raw-tx extra-config)
+    (when (and txindex? (> prune 0))
+      (error "bitcoin-node: txindex? cannot be combined with prune > 0"))
     (plain-file "bitcoin.conf"
      (string-append
       (network->chain-option network)
@@ -97,7 +107,10 @@ used; the cookie is group-readable by the @code{bitcoin} group.")
       ;; Per-network section: rpcbind must live here for non-main chains.
       (network->section network)
       (string-append "rpcbind=" rpc-bind "\n")
-      (string-append "rpcallowip=" rpc-bind "\n")))))
+      (string-join (map (lambda (entry)
+                          (string-append "rpcallowip=" entry))
+                        rpc-allow-ip)
+                   "\n" 'suffix)))))
 
 (define (bitcoin-node-shepherd-service config)
   (match-record config <bitcoin-node-configuration>

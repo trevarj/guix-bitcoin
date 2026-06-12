@@ -3,5 +3,5 @@ steps:
   lint-and-light-build:
     image: metacall/guix:latest
     commands:
-      - guix lint -L . libsecp256k1 libsecp256k1-zkp univalue bitcoin-core bitcoin-knots
+      - ./etc/ci-build.sh lint
       - ./etc/ci-build.sh light

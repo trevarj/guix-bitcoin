@@ -21,7 +21,6 @@
   #:use-module (gnu packages pkg-config)
   #:use-module (gnu packages python)
   #:use-module (gnu packages sqlite)
-  #:use-module (gnu packages serialization)
   #:use-module (gnu packages upnp))
 
 (define-public bitcoin-core
@@ -54,7 +53,7 @@
                                           (number->string
                                            (parallel-job-count)))))))))
     (native-inputs (list pkg-config python util-linux))
-    (inputs (list boost capnproto libevent sqlite zeromq))
+    (inputs (list boost libevent sqlite zeromq))
     (home-page "https://bitcoincore.org/")
     (synopsis "Bitcoin full-node reference implementation")
     (description
