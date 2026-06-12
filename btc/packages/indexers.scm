@@ -19,6 +19,7 @@
   #:use-module (gnu packages compression)
   #:use-module (gnu packages databases)
   #:use-module (gnu packages jemalloc)
+  #:use-module (gnu packages llvm)
   #:use-module (gnu packages pkg-config)
   #:use-module (gnu packages qt)
   #:use-module (btc packages rust-crates))
@@ -85,11 +86,15 @@ Electrum.")
           (add-before 'build 'use-system-rocksdb
             (lambda _
               ;; Link against Guix's rocksdb instead of building the
-              ;; bundled copy (which needs libclang at build time).
+              ;; bundled copy.  librocksdb-sys still runs bindgen over
+              ;; the headers, which needs libclang.
               (setenv "ROCKSDB_LIB_DIR"
                       #$(file-append rocksdb "/lib"))
               (setenv "ROCKSDB_INCLUDE_DIR"
-                      #$(file-append rocksdb "/include")))))))
+                      #$(file-append rocksdb "/include"))
+              (setenv "LIBCLANG_PATH"
+                      #$(file-append clang "/lib")))))))
+    (native-inputs (list clang))
     (inputs (cons rocksdb
                   (lookup-cargo-inputs 'electrs)))
     (home-page "https://github.com/romanz/electrs")

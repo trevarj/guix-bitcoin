@@ -41,10 +41,13 @@ are supplied so npm can reach the registry."
                                         #~(begin
                                             (use-modules (guix build utils))
                                             ;; npm wants a writable project tree and HOME.
+                                            ;; Don't keep the store's read-only directory
+                                            ;; permissions, or nested copies fail.
                                             (copy-recursively (string-append #$source
                                                                "/"
                                                                #$subdirectory)
-                                                              "/tmp/app")
+                                                              "/tmp/app"
+                                                              #:keep-permissions? #f)
                                             (setenv "HOME" "/tmp")
                                             ;; Guix's nss-certs ships individual PEMs plus hashed symlinks in
                                             ;; /etc/ssl/certs (no single bundle file), so point the directory
