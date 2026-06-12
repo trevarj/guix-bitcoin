@@ -26,6 +26,7 @@
   #:use-module (gnu packages multiprecision)
   #:use-module (gnu packages pkg-config)
   #:use-module (gnu packages python)
+  #:use-module (gnu packages python-build)
   #:use-module (gnu packages python-xyz)
   #:use-module (gnu packages sqlite)
   #:use-module (gnu packages web)
@@ -87,14 +88,38 @@
               ;; store output instead.  (Upstream-reportable: the probe should
               ;; honour pkg-config / the toolchain's own search paths.)
               (substitute* "configure"
-                (("^CPATH=/usr/local/lib$")
+                (("CPATH=/usr/local/lib")
                  (string-append "CPATH=" #$(file-append zlib "/include")))
-                (("^LIBRARY_PATH=/usr/local/lib$")
+                (("LIBRARY_PATH=/usr/local/lib")
                  (string-append "LIBRARY_PATH=" #$(file-append zlib "/lib"))))
+              ;; The vendored libwally/libbacktrace configure scripts are
+              ;; either generated at build time (unpatched /bin/sh
+              ;; shebangs) or invoke config.sub via /bin/sh; run them
+              ;; through the build's shell instead.
+              (setenv "CONFIG_SHELL" (which "sh"))
+              (substitute* "external/Makefile"
+                (("\\$\\{TOP\\}/libwally-core/configure")
+                 "${CONFIG_SHELL} ${TOP}/libwally-core/configure")
+                (("\\$\\(TOP\\)/libbacktrace/configure")
+                 "$(CONFIG_SHELL) $(TOP)/libbacktrace/configure"))
+              ;; The top-level Makefile likewise clobbers the build
+              ;; environment's CPATH/LIBRARY_PATH with /usr/local paths
+              ;; (make auto-exports them to every recipe), losing Guix's
+              ;; library search path: linking -lz etc. then fails.  Drop
+              ;; the assignments AND the LDLIBS' -L$(CPATH), which would
+              ;; otherwise become a bare -L that swallows the next flag.
+              (substitute* "Makefile"
+                (("CPATH := /usr/local/include") "")
+                (("LIBRARY_PATH := /usr/local/lib") "")
+                (("-L\\$\\(CPATH\\) ") ""))
+              ;; Invoked directly by doc/Makefile but not executable in
+              ;; the upstream tree.
+              (chmod "devtools/blockreplace.py" #o755)
               (apply invoke "./configure"
                      (string-append "--prefix="
                                     #$output) configure-flags))))))
     (native-inputs (list autoconf
+                         python-setuptools
                          automake
                          libtool
                          gettext-minimal

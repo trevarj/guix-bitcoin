@@ -61,6 +61,20 @@ are supplied so npm can reach the registry."
                                                                #$subdirectory)
                                                               scratch
                                                               #:keep-permissions? #f)
+                                            ;; copy-file preserves the store's read-only
+                                            ;; file modes; npm install rewrites the
+                                            ;; lockfile, so make the tree owner-writable.
+                                            (for-each (lambda (f)
+                                                        (let ((s (lstat f)))
+                                                          (unless (eq? 'symlink
+                                                                       (stat:type s))
+                                                            (chmod f
+                                                                   (logior #o200
+                                                                           (stat:perms s))))))
+                                                      (cons scratch
+                                                            (find-files scratch
+                                                                        (const #t)
+                                                                        #:directories? #t)))
                                             (setenv "HOME" scratch)
                                             ;; Guix's nss-certs ships individual PEMs plus hashed symlinks in
                                             ;; /etc/ssl/certs (no single bundle file), so point the directory

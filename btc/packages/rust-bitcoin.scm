@@ -11,8 +11,6 @@
 (define-module (btc packages rust-bitcoin)
   #:use-module (guix packages)
   #:use-module (guix build-system cargo)
-  #:use-module (gnu packages pkg-config)
-  #:use-module (gnu packages tls)
   #:use-module ((guix licenses)
                 #:prefix license:)
   #:use-module (btc packages rust-crates))
@@ -111,11 +109,12 @@ descriptors.")
     (build-system cargo-build-system)
     (arguments
      (list
+      ;; The crates.io tarball's test and example targets reference
+      ;; fixtures and feature combinations that are not shipped;
+      ;; build-only, like rust-bitcoin.
+      #:tests? #f
       #:install-source? #t))
-    ;; The test universe (electrum-client via native-tls) builds
-    ;; openssl-sys, which probes the system OpenSSL via pkg-config.
-    (native-inputs (list pkg-config))
-    (inputs (cons openssl (lookup-cargo-inputs 'rust-bdk-wallet)))
+    (inputs (lookup-cargo-inputs 'rust-bdk-wallet))
     (home-page "https://github.com/bitcoindevkit/bdk")
     (synopsis "Bitcoin Dev Kit descriptor-based wallet library")
     (description

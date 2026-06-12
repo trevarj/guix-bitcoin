@@ -83,19 +83,16 @@ Electrum.")
       #:install-source? #f
       #:phases
       #~(modify-phases %standard-phases
-          (add-before 'build 'use-system-rocksdb
+          (add-before 'build 'set-libclang-path
             (lambda _
-              ;; Link against Guix's rocksdb instead of building the
-              ;; bundled copy.  librocksdb-sys still runs bindgen over
-              ;; the headers, which needs libclang.
-              (setenv "ROCKSDB_LIB_DIR"
-                      #$(file-append rocksdb "/lib"))
-              (setenv "ROCKSDB_INCLUDE_DIR"
-                      #$(file-append rocksdb "/include"))
+              ;; Build the bundled RocksDB (upstream's default; the test
+              ;; suite expects its exact version/options — Guix's rocksdb
+              ;; lacks options electrs opens databases with).  bindgen
+              ;; needs libclang.
               (setenv "LIBCLANG_PATH"
                       #$(file-append clang "/lib")))))))
     (native-inputs (list clang pkg-config))
-    (inputs (cons* rocksdb `(,zstd "lib")
+    (inputs (cons `(,zstd "lib")
                   (lookup-cargo-inputs 'electrs)))
     (home-page "https://github.com/romanz/electrs")
     (synopsis "Efficient re-implementation of Electrum Server in Rust")
