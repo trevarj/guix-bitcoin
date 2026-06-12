@@ -19,8 +19,11 @@
 5. For service-affecting changes, run the system tests:
    `guix build -L . -e '(@ (tests bitcoin) %test-bitcoin-node)'`.
    Note that node-package builds and system tests are NOT run on every CI
-   push (they are path-gated/manual via `.woodpecker/nodes.yml`), so you
-   must run them locally or trigger the heavy pipeline manually.
+   push (they are path-gated, or dispatched manually via
+   `fj actions dispatch build-set.yml -f package_set=<set>`; see
+   `.forgejo/workflows/build-set.yml` — `.woodpecker/` holds equivalent
+   Woodpecker pipelines for runners that use it), so you must run them
+   locally or trigger the heavy pipeline manually.
 6. Note the verification performed in the commit message.
 
 ## Tier policy

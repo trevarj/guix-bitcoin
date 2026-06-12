@@ -1,0 +1,57 @@
+# Cheap gate on every push: warm/restore the Guix cache, lint everything,
+# build the light package set.
+#
+# Caching scheme: `setup-guix` installs Guix (binary tarball + guix pull to
+# the commit pinned in etc/ci-guix-channels.scm) ONCE and saves /gnu +
+# /var/guix + the root pull profile under a key derived from that pin.
+# Build jobs restore-only, so the cache stays at base-install size and
+# Guix is never reinstalled until the pin changes.
+name: check
+on:
+  push:
+    branches: [master]
+
+env:
+  CACHE_PATHS: |
+    /gnu
+    /var/guix
+    /root/.config/guix
+    /root/.cache/guix
+
+jobs:
+  setup-guix:
+    runs-on: docker
+    steps:
+      - uses: actions/checkout@v4
+      - id: guix-cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            /gnu
+            /var/guix
+            /root/.config/guix
+            /root/.cache/guix
+          key: guix-${{ hashFiles('etc/ci-guix-channels.scm') }}
+      - name: Install and pull Guix (cache miss only)
+        if: steps.guix-cache.outputs.cache-hit != 'true'
+        run: ./etc/ci-setup-guix.sh ensure
+
+  lint-and-light:
+    needs: setup-guix
+    runs-on: docker
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/cache/restore@v4
+        with:
+          path: |
+            /gnu
+            /var/guix
+            /root/.config/guix
+            /root/.cache/guix
+          key: guix-${{ hashFiles('etc/ci-guix-channels.scm') }}
+      - name: Ensure Guix (no-op on cache hit)
+        run: ./etc/ci-setup-guix.sh ensure
+      - name: Lint all channel packages
+        run: ./etc/ci-build.sh lint
+      - name: Build light package set
+        run: ./etc/ci-build.sh light

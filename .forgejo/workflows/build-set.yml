@@ -1,0 +1,35 @@
+# Heavy package-set builds: run when package modules change, or dispatch
+# manually with a chosen set:
+#   fj actions dispatch build-set.yml -f package_set=<light|nodes|indexers|wallets|lightning|rust|explorers|all>
+# Restores the Guix cache produced by check.yml's setup-guix job.
+name: build-set
+on:
+  push:
+    branches: [master]
+    paths:
+      - "btc/packages/**"
+      - "etc/ci-packages.scm"
+  workflow_dispatch:
+    inputs:
+      package_set:
+        description: "Package set to build (ci-build.sh set name)"
+        required: false
+        default: "nodes"
+
+jobs:
+  build:
+    runs-on: docker
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/cache/restore@v4
+        with:
+          path: |
+            /gnu
+            /var/guix
+            /root/.config/guix
+            /root/.cache/guix
+          key: guix-${{ hashFiles('etc/ci-guix-channels.scm') }}
+      - name: Ensure Guix (no-op on cache hit)
+        run: ./etc/ci-setup-guix.sh ensure
+      - name: Build package set
+        run: ./etc/ci-build.sh "${{ inputs.package_set || 'nodes' }}"
