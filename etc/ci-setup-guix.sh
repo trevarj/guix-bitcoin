@@ -76,9 +76,14 @@ start_daemon() {
     say "starting guix-daemon"
     # --disable-chroot: unprivileged CI containers cannot create the
     # isolated build environment; acceptable for CI verification builds.
-    "$ROOT_GUIX/bin/guix-daemon" --build-users-group=guixbuild \
-                                 --disable-chroot &
+    # setsid detaches the daemon from the CI step's process group so it
+    # survives into later workflow steps.
+    rm -f /var/guix/daemon-socket/socket
+    setsid "$ROOT_GUIX/bin/guix-daemon" --build-users-group=guixbuild \
+           --disable-chroot >/var/log/guix-daemon.log 2>&1 &
     sleep 1
+    pgrep -f guix-daemon >/dev/null || \
+        { say "daemon failed to start"; cat /var/log/guix-daemon.log; exit 1; }
 }
 
 authorize_substitutes() {
