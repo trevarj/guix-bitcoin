@@ -32,7 +32,7 @@ jobs:
             /var/guix
             /root/.config/guix
             /root/.cache/guix
-          key: guix-${{ hashFiles('etc/ci-guix-channels.scm') }}
+          key: guix-${{ hashFiles('etc/ci-guix-channels.scm', 'etc/ci-setup-guix.sh') }}
       - name: Ensure Guix (no-op on cache hit)
         run: ./etc/ci-setup-guix.sh ensure
       - name: Build package set

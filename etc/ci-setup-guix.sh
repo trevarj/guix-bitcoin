@@ -106,6 +106,16 @@ pull_if_needed() {
         say "guix already at pinned commit ${PINNED_COMMIT}"
         return
     fi
+    # Skip the expensive pull entirely when the installed (nightly) guix
+    # is recent enough to load the channel's modules — the channel only
+    # needs current-master APIs, not one exact commit, for CI builds.
+    if guix repl -L . >/dev/null 2>&1 <<'EOF'
+(use-modules (etc ci-packages) (btc packages rust-crates))
+EOF
+    then
+        say "installed guix loads the channel; skipping guix pull"
+        return
+    fi
     say "guix pull to pinned commit ${PINNED_COMMIT} (one-time; cached afterwards)"
     # libgit2's TLS transport reliably fails (EAGAIN) on the large guix
     # clone in CI containers; clone with system git instead and pull from
@@ -114,14 +124,12 @@ pull_if_needed() {
     mirror=/tmp/guix-channel-mirror.git
     if [ ! -d "$mirror" ]; then
         n=0
-        for url in https://codeberg.org/guix/guix.git \
-                   https://git.savannah.gnu.org/git/guix.git \
-                   https://codeberg.org/guix/guix.git; do
-            say "cloning guix channel from $url"
-            git clone --quiet --bare "$url" "$mirror" && break
+        until git clone --quiet --bare \
+                  https://codeberg.org/guix/guix.git "$mirror"; do
             rm -rf "$mirror"
             n=$((n + 1))
             [ "$n" -ge 3 ] && { say "channel clone failed after $n attempts"; exit 1; }
+            say "clone attempt $n failed; retrying in 30s"
             sleep 30
         done
     fi

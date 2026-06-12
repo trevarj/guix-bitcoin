@@ -8,6 +8,10 @@ on:
     branches: [master]
   workflow_dispatch:
 
+concurrency:
+  group: check-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   setup-guix:
     runs-on: ubuntu-latest
@@ -24,7 +28,7 @@ jobs:
             /var/guix
             /root/.config/guix
             /root/.cache/guix
-          key: guix-${{ hashFiles('etc/ci-guix-channels.scm') }}
+          key: guix-${{ hashFiles('etc/ci-guix-channels.scm', 'etc/ci-setup-guix.sh') }}
       - name: Install and pull Guix (cache miss only)
         if: steps.guix-cache.outputs.cache-hit != 'true'
         run: ./etc/ci-setup-guix.sh ensure
@@ -44,7 +48,7 @@ jobs:
             /var/guix
             /root/.config/guix
             /root/.cache/guix
-          key: guix-${{ hashFiles('etc/ci-guix-channels.scm') }}
+          key: guix-${{ hashFiles('etc/ci-guix-channels.scm', 'etc/ci-setup-guix.sh') }}
       - name: Ensure Guix (no-op on cache hit)
         run: ./etc/ci-setup-guix.sh ensure
       - name: Lint all channel packages
