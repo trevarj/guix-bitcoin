@@ -1,6 +1,6 @@
 #!/bin/sh
 # Build a named package set:
-#   etc/ci-build.sh {light|nodes|indexers|wallets|lightning|rust|all|lint}
+#   etc/ci-build.sh {light|nodes|indexers|wallets|lightning|rust|explorers|all|lint}
 # Used by CI and equally runnable on any build box.
 set -eu
 set_name="${1:-light}"
@@ -11,6 +11,7 @@ case "$set_name" in
   wallets)  var=%wallet-packages ;;
   lightning) var=%lightning-packages ;;
   rust)  var=%rust-packages ;;
+  explorers) var=%explorer-packages ;;
   all)   var=%all-packages ;;
   lint)
     names=$(guix repl -L . <<'EOF'
@@ -19,6 +20,6 @@ case "$set_name" in
 EOF
     )
     exec guix lint -L . $names ;;
-  *) echo "unknown set: $set_name (want light|nodes|indexers|wallets|lightning|rust|all|lint)" >&2; exit 1 ;;
+  *) echo "unknown set: $set_name (want light|nodes|indexers|wallets|lightning|rust|explorers|all|lint)" >&2; exit 1 ;;
 esac
 exec guix build -L . -e "(@ (etc ci-packages) $var)"

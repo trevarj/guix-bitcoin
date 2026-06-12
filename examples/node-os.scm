@@ -33,4 +33,16 @@
           ;;           (daemon-p2p-address "127.0.0.1:18444")))
           ;; (service clightning-service-type
           ;;          (clightning-configuration (network 'regtest)))
+          ;; Explorer stack (uncomment and adapt; also import the service
+          ;; modules above: (btc services mempool) and (gnu services
+          ;; databases) and (gnu services web), plus add mysql-service-type
+          ;; and nginx-service-type to the system).  The backend needs the
+          ;; node, an Electrum server (electrs/fulcrum), and MariaDB:
+          ;; (service mysql-service-type)
+          ;; (service nginx-service-type)
+          ;; (service mempool-service-type
+          ;;          (mempool-configuration
+          ;;           (network 'regtest)
+          ;;           (bitcoind-rpc-port 18443)
+          ;;           (bitcoind-cookie "/var/lib/bitcoind/regtest/.cookie")))
           %base-services)))

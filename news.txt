@@ -1,1 +1,15 @@
-(channel-news (version 0))
+(channel-news
+  (version 0)
+  (entry (commit "5e8f5a4")
+         (title (en "Explorer, indexer, wallet, lightning and Rust additions"))
+         (body (en "guix-bitcoin now ships a full self-hosted Bitcoin
+ecosystem.  New packages include the @code{mempool-backend} and
+@code{mempool-frontend} explorer (with the @code{mempool-service-type}
+wiring the backend, MariaDB, an Electrum server and nginx together), the
+@code{fulcrum} and @code{electrs} Electrum indexers, the @code{electrum} and
+@code{hwi} wallets, the @code{core-lightning} and @code{lnd} Lightning
+nodes, and the @code{rust-bitcoin} crate family.  New services include
+@code{electrs-service-type}, @code{fulcrum-service-type},
+@code{clightning-service-type}, @code{lnd-service-type} and
+@code{mempool-service-type}.  See @file{examples/node-os.scm} for a
+self-hosted stack template."))))
