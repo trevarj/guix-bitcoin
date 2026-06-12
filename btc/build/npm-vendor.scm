@@ -19,7 +19,12 @@
                                source
                                subdirectory
                                hash
-                               node)
+                               node
+                               ;; "ci" needs package.json and the lockfile
+                               ;; in strict sync; some upstreams (mempool
+                               ;; frontend) only support "install".  The
+                               ;; FOD hash still pins the result.
+                               (npm-command "ci"))
   "Return a fixed-output derivation containing a normalized @file{node_modules}
 tree produced by @command{npm ci} for SOURCE's SUBDIRECTORY (which must contain
 @file{package.json} and @file{package-lock.json}).  HASH is the expected sha256
@@ -65,7 +70,8 @@ are supplied so npm can reach the registry."
                                                        "/etc/ssl/certs"))
                                             (with-directory-excursion scratch
                                               (invoke #$(file-append node
-                                                         "/bin/npm") "ci"
+                                                         "/bin/npm")
+                                                      #$npm-command
                                                       "--ignore-scripts"
                                                       "--no-audit" "--no-fund"))
                                             ;; Ship the installed dependency tree itself.

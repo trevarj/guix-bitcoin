@@ -44,7 +44,9 @@
    #:source %mempool-source
    #:subdirectory "frontend"
    #:hash "0000000000000000000000000000000000000000000000000000"
-   #:node node-lts))
+   #:node node-lts
+   ;; v3.3.1 lockfile is not in strict "ci" sync (upstream installs).
+   #:npm-command "install"))
 
 (define-public mempool-backend
   (package

@@ -94,8 +94,8 @@ Electrum.")
                       #$(file-append rocksdb "/include"))
               (setenv "LIBCLANG_PATH"
                       #$(file-append clang "/lib")))))))
-    (native-inputs (list clang))
-    (inputs (cons rocksdb
+    (native-inputs (list clang pkg-config))
+    (inputs (cons* rocksdb `(,zstd "lib")
                   (lookup-cargo-inputs 'electrs)))
     (home-page "https://github.com/romanz/electrs")
     (synopsis "Efficient re-implementation of Electrum Server in Rust")
