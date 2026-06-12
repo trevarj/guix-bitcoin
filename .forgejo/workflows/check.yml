@@ -21,7 +21,7 @@ env:
 
 jobs:
   setup-guix:
-    runs-on: docker
+    runs-on: codeberg-medium-lazy
     steps:
       - uses: actions/checkout@v4
       - id: guix-cache
@@ -39,7 +39,7 @@ jobs:
 
   lint-and-light:
     needs: setup-guix
-    runs-on: docker
+    runs-on: codeberg-medium-lazy
     steps:
       - uses: actions/checkout@v4
       - uses: actions/cache/restore@v4

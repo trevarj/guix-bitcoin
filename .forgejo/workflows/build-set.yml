@@ -18,6 +18,12 @@ on:
 
 jobs:
   build:
+    # "docker" is a SELF-HOSTED runner label: bitcoin-core-class builds
+    # exceed Codeberg's shared-runner limits (codeberg-medium = 4 CPU /
+    # 8 GB / 10 min; -lazy variants relax time but not resources).
+    # Register a runner on your own hardware:
+    #   https://codeberg.org/trevarj/guix-bitcoin/settings/actions/runners
+    #   forgejo-runner register --labels docker:docker://node:20-bookworm
     runs-on: docker
     steps:
       - uses: actions/checkout@v4
