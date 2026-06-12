@@ -21,8 +21,7 @@ install_binary() {
     command -v wget >/dev/null || { apt-get update -qq; apt-get install -y -qq wget xz-utils; }
     command -v xz   >/dev/null || { apt-get update -qq; apt-get install -y -qq xz-utils; }
     wget -q -O /tmp/guix-binary.tar.xz "$GUIX_TARBALL_URL"
-    tar --warning=no-timestamp -xf /tmp/guix-binary.tar.xz -C /tmp guix-binary
-    # The tarball extracts gnu/ and var/guix at its root.
+    # The tarball contains gnu/ and var/guix at its root.
     rm -rf /tmp/guix-binary; mkdir /tmp/guix-binary
     tar --warning=no-timestamp -xf /tmp/guix-binary.tar.xz -C /tmp/guix-binary
     mv /tmp/guix-binary/gnu /gnu
