@@ -69,12 +69,28 @@
             (lambda* (#:key configure-flags #:allow-other-keys)
               (setenv "CC"
                       #$(cc-for-target))
-              ;; The bespoke configure passes -I$CPATH to its feature
-              ;; probes; Guix sets C_INCLUDE_PATH instead, so an unset
-              ;; CPATH yields a malformed -I flag and the zlib probe
-              ;; silently fails (gossmap-compress then miscompiles).
-              (setenv "CPATH"
-                      #$(file-append zlib "/include"))
+              ;; The bespoke configure runs its zlib feature probe through the
+              ;; ccan configurator with a hard-coded, non-FHS search path:
+              ;; `-I$CPATH -L$LIBRARY_PATH', where CPATH/LIBRARY_PATH default
+              ;; to /usr/local/lib (see the top of ./configure and the
+              ;; $CONFIGURATOR --extra-tests invocation).  On Guix those paths
+              ;; are empty, so the probe's link step fails with
+              ;; `ld: cannot find -lz', HAVE_ZLIB is set to 0, and
+              ;; devtools/gossmap-compress.c is then built with the no-zlib
+              ;; fallback (which only declares gzdopen, not gzopen) -- the
+              ;; compile then errors on an implicit gzopen declaration.
+              ;;
+              ;; Setting CPATH/LIBRARY_PATH in the environment does NOT help:
+              ;; these two lines are plain (already-exported) shell
+              ;; assignments, so configure clobbers any inherited value for
+              ;; every child GCC.  Patch the assignments to point at zlib's
+              ;; store output instead.  (Upstream-reportable: the probe should
+              ;; honour pkg-config / the toolchain's own search paths.)
+              (substitute* "configure"
+                (("^CPATH=/usr/local/lib$")
+                 (string-append "CPATH=" #$(file-append zlib "/include")))
+                (("^LIBRARY_PATH=/usr/local/lib$")
+                 (string-append "LIBRARY_PATH=" #$(file-append zlib "/lib"))))
               (apply invoke "./configure"
                      (string-append "--prefix="
                                     #$output) configure-flags))))))
