@@ -17,7 +17,9 @@
                 #:prefix license:)
   #:use-module (gnu packages bash)
   #:use-module (gnu packages node)
-  #:use-module (btc build npm-vendor))
+  #:use-module (gnu packages rsync)
+  #:use-module (btc build npm-vendor)
+  #:use-module (btc build napi-vendor))
 
 (define %mempool-version
   "3.3.1")
@@ -36,6 +38,18 @@
    #:source %mempool-source
    #:subdirectory "backend"
    #:hash "01jqchx302q9fjjlsglzc9krq61vbilr2xzxjz633050ia6f49p2"
+   #:node node-lts))
+
+(define %backend-rust-gbt
+  ;; The backend's 'rust-gbt' module is a napi-rs native addon living in the
+  ;; mempool tree at rust/gbt; package.json wires it as "file:./rust-gbt" and
+  ;; an upstream preinstall script builds it.  Our npm FOD installs with
+  ;; --ignore-scripts, so we build the addon here (cdylib + generated
+  ;; index.js/index.d.ts) and drop it into backend/rust-gbt before tsc runs.
+  (napi-vendored-module #:name "mempool-rust-gbt"
+   #:source %mempool-source
+   #:subdirectory "rust/gbt"
+   #:hash "1dmsnxk28hgixjh83hk6ghgqyym2rckd0rmcyywcpyjb6r9clac0"
    #:node node-lts))
 
 (define %frontend-node-modules
@@ -57,6 +71,9 @@
     (arguments
      (list
       #:tests? #f
+      ;; node_modules ships prebuilt napi blobs (no Guix RUNPATH);
+      ;; vendored-tier app, validation intentionally relaxed.
+      #:validate-runpath? #f
       #:phases
       #~(modify-phases %standard-phases
           (delete 'configure)
@@ -67,6 +84,29 @@
                 ;; Drop in the pre-vendored, normalized dependency tree
                 ;; instead of running 'npm ci' against a cache.
                 (copy-recursively #$%backend-node-modules "node_modules")
+                ;; node_modules/rust-gbt is a symlink to ../rust-gbt (the
+                ;; "file:./rust-gbt" dependency); populate that target with
+                ;; the pre-built napi addon so tsc resolves 'rust-gbt'.
+                (mkdir-p "rust-gbt")
+                (copy-recursively #$%backend-rust-gbt "rust-gbt")
+                ;; Replace the file: dependency's symlink with a real
+                ;; copy so the installed tree is self-contained (the
+                ;; symlink would dangle under lib/mempool-backend).
+                (when (eq? 'symlink
+                           (stat:type (lstat "node_modules/rust-gbt")))
+                  (delete-file "node_modules/rust-gbt")
+                  (copy-recursively "rust-gbt" "node_modules/rust-gbt"))
+                ;; The vendored scripts carry /usr/bin/env shebangs,
+                ;; which don't exist in the build environment.
+                ;; Regular files only: patching through a .bin/ symlink
+                ;; would replace it with a regular-file copy, breaking
+                ;; the target's relative requires.
+                (for-each (lambda (f)
+                            (false-if-exception (patch-shebang f)))
+                          (find-files "node_modules"
+                                      (lambda (f s)
+                                        (and (eq? 'regular (stat:type s))
+                                             (executable-file? f)))))
                 (invoke #$(file-append node-lts "/bin/npm") "run" "build"))))
           (replace 'install
             (lambda _
@@ -109,6 +149,9 @@ serves the explorer's REST and WebSocket APIs.")
     (arguments
      (list
       #:tests? #f
+      ;; node_modules ships prebuilt napi blobs (no Guix RUNPATH);
+      ;; vendored-tier app, validation intentionally relaxed.
+      #:validate-runpath? #f
       #:phases
       #~(modify-phases %standard-phases
           (delete 'configure)
@@ -125,6 +168,17 @@ serves the explorer's REST and WebSocket APIs.")
                 ;; Drop in the pre-vendored, normalized dependency tree
                 ;; instead of running 'npm ci' against a cache.
                 (copy-recursively #$%frontend-node-modules "node_modules")
+                ;; The vendored scripts carry /usr/bin/env shebangs,
+                ;; which don't exist in the build environment.
+                ;; Regular files only: patching through a .bin/ symlink
+                ;; would replace it with a regular-file copy, breaking
+                ;; the target's relative requires.
+                (for-each (lambda (f)
+                            (false-if-exception (patch-shebang f)))
+                          (find-files "node_modules"
+                                      (lambda (f s)
+                                        (and (eq? 'regular (stat:type s))
+                                             (executable-file? f)))))
                 (invoke #$(file-append node-lts "/bin/npm") "run" "build"))))
           (replace 'install
             (lambda _
@@ -135,7 +189,7 @@ serves the explorer's REST and WebSocket APIs.")
               (copy-recursively "frontend/dist"
                                 (string-append #$output
                                                "/share/mempool-frontend")))))))
-    (native-inputs (list node-lts))
+    (native-inputs (list node-lts rsync))
     (home-page "https://mempool.space/")
     (synopsis "Mempool and block explorer frontend (static assets)")
     (description
