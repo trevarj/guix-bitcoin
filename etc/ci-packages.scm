@@ -6,11 +6,13 @@
   #:use-module (btc packages indexers)
   #:use-module (btc packages wallets)
   #:use-module (btc packages lightning)
+  #:use-module (btc packages rust-bitcoin)
   #:export (%light-packages
             %node-packages
             %indexer-packages
             %wallet-packages
             %lightning-packages
+            %rust-packages
             %all-packages))
 
 (define %light-packages
@@ -28,6 +30,10 @@
 (define %lightning-packages
   (list core-lightning lnd))
 
+(define %rust-packages
+  (list rust-bitcoin rust-bitcoin-hashes rust-secp256k1
+        rust-miniscript rust-bdk-wallet))
+
 (define %all-packages
   (append %light-packages %node-packages %indexer-packages
-          %wallet-packages %lightning-packages))
+          %wallet-packages %lightning-packages %rust-packages))

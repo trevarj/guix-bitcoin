@@ -5,6 +5,7 @@ when:
     path:
       include: ["btc/packages/nodes.scm", "btc/packages/indexers.scm",
                 "btc/packages/lightning.scm", "btc/packages/wallets.scm",
+                "btc/packages/rust-bitcoin.scm", "btc/packages/rust-crates.scm",
                 "etc/ci-packages.scm"]
   - event: manual
 
