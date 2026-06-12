@@ -114,10 +114,14 @@ ZeroMQ notification support, without the GUI.")
               (invoke "python3" "./test/functional/test_runner.py"
                       (string-append "--jobs="
                                      (number->string (parallel-job-count)))
-                      ;; These two need IPv6 (::1), which build
-                      ;; environments and CI containers lack.
-                      "--exclude=interface_bitcoin_cli.py"
-                      "--exclude=rpc_bind.py --ipv6"))))))
+                      ;; These need IPv6 (::1), which build environments
+                      ;; and CI containers lack.  Knots 29's test_runner
+                      ;; (unlike Core 31's) takes one comma-separated
+                      ;; --exclude and matches exact variant names.
+                      (string-append
+                       "--exclude=interface_bitcoin_cli.py --descriptors,"
+                       "interface_bitcoin_cli.py --legacy-wallet,"
+                       "rpc_bind.py --ipv6")))))))
     (native-inputs (list pkg-config python util-linux))
     (inputs (list boost libevent miniupnpc sqlite zeromq))
     (home-page "https://bitcoinknots.org/")
