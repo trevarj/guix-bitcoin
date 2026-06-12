@@ -35,10 +35,10 @@ ensure_system_deps() {
     # fails name resolution ("Servname not supported for ai_socktype")
     # and silently builds the world from bootstrap instead.
     if ! { command -v wget && command -v xz && command -v pgrep && \
-           [ -e /etc/services ]; } >/dev/null 2>&1; then
-        say "installing system deps (wget xz netbase procps)"
+           command -v git && [ -e /etc/services ]; } >/dev/null 2>&1; then
+        say "installing system deps (wget xz netbase procps git)"
         apt-get update -qq
-        apt-get install -y -qq wget xz-utils netbase procps ca-certificates
+        apt-get install -y -qq wget xz-utils netbase procps ca-certificates git
     fi
 }
 
@@ -107,9 +107,28 @@ pull_if_needed() {
         return
     fi
     say "guix pull to pinned commit ${PINNED_COMMIT} (one-time; cached afterwards)"
-    # Retry: large channel clones can hit transient network resets.
+    # libgit2's TLS transport reliably fails (EAGAIN) on the large guix
+    # clone in CI containers; clone with system git instead and pull from
+    # the local mirror.  A bare clone carries all branches, including the
+    # keyring branch needed for channel authentication.
+    mirror=/tmp/guix-channel-mirror.git
+    if [ ! -d "$mirror" ]; then
+        n=0
+        for url in https://codeberg.org/guix/guix.git \
+                   https://git.savannah.gnu.org/git/guix.git \
+                   https://codeberg.org/guix/guix.git; do
+            say "cloning guix channel from $url"
+            git clone --quiet --bare "$url" "$mirror" && break
+            rm -rf "$mirror"
+            n=$((n + 1))
+            [ "$n" -ge 3 ] && { say "channel clone failed after $n attempts"; exit 1; }
+            sleep 30
+        done
+    fi
+    sed "s|\"https://[^\"]*guix.git\"|\"file://$mirror\"|" \
+        etc/ci-guix-channels.scm > /tmp/ci-channels.scm
     n=0
-    until guix pull -C etc/ci-guix-channels.scm; do
+    until guix pull -C /tmp/ci-channels.scm; do
         n=$((n + 1))
         [ "$n" -ge 3 ] && { say "guix pull failed after $n attempts"; exit 1; }
         say "guix pull attempt $n failed; retrying in 30s"
