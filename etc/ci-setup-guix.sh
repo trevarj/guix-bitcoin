@@ -107,7 +107,14 @@ pull_if_needed() {
         return
     fi
     say "guix pull to pinned commit ${PINNED_COMMIT} (one-time; cached afterwards)"
-    guix pull -C etc/ci-guix-channels.scm
+    # Retry: large channel clones can hit transient network resets.
+    n=0
+    until guix pull -C etc/ci-guix-channels.scm; do
+        n=$((n + 1))
+        [ "$n" -ge 3 ] && { say "guix pull failed after $n attempts"; exit 1; }
+        say "guix pull attempt $n failed; retrying in 30s"
+        sleep 30
+    done
     ln -sf /root/.config/guix/current/bin/guix /usr/local/bin/guix
     hash -r 2>/dev/null || true
 }

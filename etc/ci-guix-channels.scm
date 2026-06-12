@@ -6,9 +6,11 @@
 ;; The introduction is the official guix channel introduction; the 1.4.0
 ;; bootstrap guix requires it explicitly because the channel URL differs
 ;; from its built-in (pre-Codeberg) default.
+;; The Savannah mirror handles large clones more reliably than
+;; codeberg.org under CI load (transient SSL resets observed).
 (list (channel
        (name 'guix)
-       (url "https://codeberg.org/guix/guix.git")
+       (url "https://git.savannah.gnu.org/git/guix.git")
        (branch "master")
        (commit "e494c2bd3de8087ac19c1fce9effb3128b35091e")
        (introduction
