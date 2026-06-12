@@ -141,10 +141,7 @@ extensions.")
 
 (define-public lnd
   (let* ((version "0.20.1-beta")
-         ;; FIXME: real hash from first build — until the go-mod-vendor FOD
-         ;; runs once, this all-zeros placeholder makes the build fail with
-         ;; the actual hash to splice in here (standard Guix FOD workflow).
-         (vendored-hash "0000000000000000000000000000000000000000000000000000")
+         (vendored-hash "0n2jx75yhpgg5abs4kjm9kzxvnbv10acjlnp7c9g5qzi1cxapscq")
          (plain-source (origin
                          (method git-fetch)
                          (uri (git-reference

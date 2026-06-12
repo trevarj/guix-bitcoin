@@ -38,12 +38,11 @@
    #:hash "01jqchx302q9fjjlsglzc9krq61vbilr2xzxjz633050ia6f49p2"
    #:node node-lts))
 
-;; FIXME: real hash from first build.
 (define %frontend-node-modules
   (npm-vendored-modules #:name "mempool-frontend"
    #:source %mempool-source
    #:subdirectory "frontend"
-   #:hash "0000000000000000000000000000000000000000000000000000"
+   #:hash "0ip8k7rq5c5172dvldchw3zzsr914xmhj9k08dyffkrqg443zaqq"
    #:node node-lts
    ;; v3.3.1 lockfile is not in strict "ci" sync (upstream installs).
    #:npm-command "install"))
