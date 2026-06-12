@@ -9,8 +9,22 @@
 #   - starts guix-daemon and authorizes official substitute servers
 set -eu
 
-GUIX_BINARY_VERSION="${GUIX_BINARY_VERSION:-1.4.0}"
-GUIX_TARBALL_URL="https://ftp.gnu.org/gnu/guix/guix-binary-${GUIX_BINARY_VERSION}.x86_64-linux.tar.xz"
+# Recent nightly binary tarball from Guix CI (commit f4ee072, 2026-06-01):
+# the 1.4.0 release tarball is too old to `guix pull' to a current master
+# commit (compute-guix-derivation crashes across the 4-year jump).  The
+# pinned product URL can be garbage-collected by Cuirass eventually, so
+# fall back to resolving the latest successful nightly dynamically.
+GUIX_TARBALL_URL="${GUIX_TARBALL_URL:-https://ci.guix.gnu.org/download/3871}"
+
+latest_tarball_url() {
+    build=$(wget -qO- "https://ci.guix.gnu.org/api/latestbuilds?nr=1&jobset=tarball&job=binary-tarball.x86_64-linux&status=0" \
+            | sed -n 's/.*"id":\([0-9]\+\).*/\1/p' | head -1)
+    [ -n "$build" ] || return 1
+    product=$(wget -qO- "https://ci.guix.gnu.org/build/$build/details" \
+              | sed -n 's|.*href="\(/download/[0-9]\+\)".*|\1|p' | head -1)
+    [ -n "$product" ] || return 1
+    echo "https://ci.guix.gnu.org$product"
+}
 ROOT_GUIX=/var/guix/profiles/per-user/root/current-guix
 PINNED_COMMIT=$(sed -n 's/.*(commit "\([0-9a-f]\{40\}\)").*/\1/p' etc/ci-guix-channels.scm)
 
@@ -29,8 +43,13 @@ ensure_system_deps() {
 }
 
 install_binary() {
-    say "installing Guix binary tarball ${GUIX_BINARY_VERSION}"
-    wget -q -O /tmp/guix-binary.tar.xz "$GUIX_TARBALL_URL"
+    say "installing Guix nightly binary tarball"
+    if ! wget -q -O /tmp/guix-binary.tar.xz "$GUIX_TARBALL_URL"; then
+        say "pinned tarball URL gone; resolving latest nightly"
+        GUIX_TARBALL_URL=$(latest_tarball_url)
+        say "resolved: $GUIX_TARBALL_URL"
+        wget -q -O /tmp/guix-binary.tar.xz "$GUIX_TARBALL_URL"
+    fi
     # The tarball contains gnu/ and var/guix at its root.
     rm -rf /tmp/guix-binary; mkdir /tmp/guix-binary
     tar --warning=no-timestamp -xf /tmp/guix-binary.tar.xz -C /tmp/guix-binary
