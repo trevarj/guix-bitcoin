@@ -113,11 +113,23 @@ header within these lines."))
                                                  rpc-allow-ip) "\n"
                                             'suffix)))))
 
+(define (network-data-directory config)
+  "The directory where bitcoind keeps the active network's state (and its
+RPC cookie)."
+  (match-record config <bitcoin-node-configuration>
+    (network data-directory)
+    (match network
+      ('mainnet data-directory)
+      ('testnet (string-append data-directory "/testnet3"))
+      ('signet (string-append data-directory "/signet"))
+      ('regtest (string-append data-directory "/regtest")))))
+
 (define (bitcoin-node-shepherd-service config)
   (match-record config <bitcoin-node-configuration>
     (package
       data-directory)
-    (let ((conf (bitcoin-node-config-file config)))
+    (let ((conf (bitcoin-node-config-file config))
+          (netdir (network-data-directory config)))
       (list (shepherd-service (provision '(bitcoind bitcoin-node))
                               (requirement '(user-processes networking))
                               (documentation "Run a bitcoind full node.")
@@ -135,7 +147,26 @@ header within these lines."))
                                         #:log-file "/var/log/bitcoind.log"))
                               ;; bitcoind flushes state on SIGTERM; give it time.
                               (stop #~(make-kill-destructor SIGTERM
-                                                            #:grace-period 120)))))))
+                                                            #:grace-period 120)))
+            ;; bitcoind forces umask 077, so the per-network directory it
+            ;; creates is 0700 and the group-readable RPC cookie inside is
+            ;; unreachable for cookie clients in the bitcoin group.  Open
+            ;; the directory to the group once the cookie appears.
+            (shepherd-service (provision '(bitcoind-cookie-access))
+                              (requirement '(bitcoind))
+                              (one-shot? #t)
+                              (documentation
+                               "Make bitcoind's network directory group-traversable.")
+                              (start #~(lambda _
+                                         (let loop ((tries 120))
+                                           (cond ((file-exists?
+                                                   (string-append #$netdir
+                                                                  "/.cookie"))
+                                                  (chmod #$netdir #o750)
+                                                  #t)
+                                                 ((zero? tries) #f)
+                                                 (else (sleep 1)
+                                                       (loop (- tries 1))))))))))))
 
 (define (bitcoin-node-account config)
   (list (user-group

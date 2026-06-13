@@ -17,7 +17,9 @@
                       %base-file-systems))
   (packages (cons bitcoin-core %base-packages))
   (services
-   (cons* (service bitcoin-node-service-type
+   (cons* ;; bitcoind's Shepherd service requires 'networking'.
+          (service dhcpcd-service-type)
+          (service bitcoin-node-service-type
                    (bitcoin-node-configuration
                     (network 'regtest)
                     (zmq-pub-raw-block "tcp://127.0.0.1:28332")))

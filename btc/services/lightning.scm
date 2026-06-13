@@ -69,7 +69,7 @@ operator, never touched by this service).")
       )
     (let ((conf (clightning-config-file config)))
       (list (shepherd-service (provision '(clightning lightningd))
-                              (requirement '(bitcoind user-processes
+                              (requirement '(bitcoind bitcoind-cookie-access user-processes
                                                       networking))
                               (documentation "Run the Core Lightning daemon.")
                               (start #~(make-forkexec-constructor (list #$(file-append
@@ -200,7 +200,7 @@ non-mainnet networks).")
       )
     (let ((conf (lnd-config-file config)))
       (list (shepherd-service (provision '(lnd))
-                              (requirement '(bitcoind user-processes
+                              (requirement '(bitcoind bitcoind-cookie-access user-processes
                                                       networking))
                               (documentation "Run the lnd Lightning daemon.")
                               (start #~(make-forkexec-constructor (list #$(file-append

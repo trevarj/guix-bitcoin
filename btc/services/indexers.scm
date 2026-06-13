@@ -68,7 +68,7 @@ Must match the bitcoin node's network.")
       electrum-rpc-address
       extra-options)
     (list (shepherd-service (provision '(electrs))
-                            (requirement '(bitcoind user-processes networking))
+                            (requirement '(bitcoind bitcoind-cookie-access user-processes networking))
                             (documentation "Run the electrs Electrum server.")
                             (start #~(make-forkexec-constructor (append (list #$
                                                                               (file-append
@@ -190,7 +190,7 @@ non-mainnet, e.g. @file{/var/lib/bitcoind/regtest/.cookie}).")
       )
     (let ((conf (fulcrum-config-file config)))
       (list (shepherd-service (provision '(fulcrum))
-                              (requirement '(bitcoind user-processes
+                              (requirement '(bitcoind bitcoind-cookie-access user-processes
                                                       networking))
                               (documentation
                                "Run the Fulcrum Electrum server.")

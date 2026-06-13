@@ -188,7 +188,7 @@ and underscore are allowed.")
     (let ((conf (mempool-backend-config-file config)))
       (list (mempool-db-setup-service config)
             (shepherd-service (provision '(mempool-backend))
-                              (requirement `(bitcoind ,electrum-provision
+                              (requirement `(bitcoind bitcoind-cookie-access ,electrum-provision
                                                       mysql mempool-db-setup
                                                       user-processes
                                                       networking))

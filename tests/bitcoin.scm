@@ -13,6 +13,7 @@
   #:use-module (gnu system)
   #:use-module (gnu system vm)
   #:use-module (gnu services)
+  #:use-module (gnu services networking)
   #:use-module (btc services bitcoin)
   #:use-module (btc services indexers)
   #:use-module (btc packages nodes)
@@ -23,7 +24,8 @@
   "Boot a VM running bitcoin-node-service-type on regtest and exercise the
 RPC interface."
   (define os
-    (marionette-operating-system (simple-operating-system (service
+    (marionette-operating-system (simple-operating-system (service dhcpcd-service-type)
+                                  (service
                                                            bitcoin-node-service-type
                                                            (bitcoin-node-configuration
                                                             (network 'regtest))))
@@ -111,7 +113,8 @@ exercise the RPC interface.")
   "Boot a VM running bitcoin-node-service-type plus electrs-service-type on
 regtest and check that electrs serves the Electrum protocol."
   (define os
-    (marionette-operating-system (simple-operating-system (service
+    (marionette-operating-system (simple-operating-system (service dhcpcd-service-type)
+                                  (service
                                                            bitcoin-node-service-type
                                                            (bitcoin-node-configuration
                                                             (network 'regtest)
@@ -153,13 +156,42 @@ regtest and check that electrs serves the Electrum protocol."
                                                                 (wait-for-service 'bitcoind))
                                                              marionette))
 
+                               ;; electrs only serves the Electrum port
+                               ;; once bitcoind reports IBD finished; a
+                               ;; fresh regtest chain with zero blocks
+                               ;; never does, so mine one.
+                               (test-assert "mine a block to clear IBD"
+                                            (marionette-eval
+                                             '(let ((cli (lambda (args)
+                                                           (status:exit-val
+                                                            (system* "su" "bitcoin" "-s" "/bin/sh" "-c"
+                                                                     (string-append
+                                                                      #$(file-append bitcoin-core "/bin/bitcoin-cli")
+                                                                      " -regtest -datadir=/var/lib/bitcoind "
+                                                                      args))))))
+                                                (let loop ((tries 60))
+                                                  (cond ((eqv? 0 (cli "getblockchaininfo")) ;RPC up
+                                                         (cli "createwallet w")
+                                                         (eqv? 0 (cli "-generate 1")))
+                                                        ((zero? tries) #f)
+                                                        (else (sleep 2)
+                                                              (loop (- tries 1))))))
+                                             marionette))
+
+                               ;; Generous retries: shepherd may start
+                               ;; electrs well after bitcoind under the
+                               ;; default 20s wait-for-service timeout.
                                (test-assert "electrs service is running"
-                                            (marionette-eval '(begin
-                                                                (use-modules (gnu
-                                                                              services
-                                                                              herd))
-                                                                (wait-for-service 'electrs))
-                                                             marionette))
+                                            (marionette-eval
+                                             '(begin
+                                                (use-modules (gnu services herd))
+                                                (let loop ((tries 10))
+                                                  (or (false-if-exception
+                                                       (wait-for-service 'electrs))
+                                                      (if (zero? tries) #f
+                                                          (begin (sleep 3)
+                                                                 (loop (- tries 1)))))))
+                                             marionette))
 
                                (test-assert
                                 "electrum port accepts connections"
