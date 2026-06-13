@@ -154,7 +154,9 @@ Run it any time with `gh workflow run refresh.yml`.
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md).
+See [CONTRIBUTING.md](CONTRIBUTING.md). Maintainer runbooks for recurring tasks
+(bumping packages, adding packages/services, releasing, troubleshooting) are in
+[docs/maintenance/](docs/maintenance/README.md).
 
 ## License
 
