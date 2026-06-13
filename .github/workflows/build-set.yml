@@ -8,7 +8,7 @@ on:
   push:
     branches: [master]
     paths:
-      - "btc/packages/**"
+      - "bitcoin/packages/**"
       - "etc/ci-packages.scm"
   workflow_dispatch:
     inputs:

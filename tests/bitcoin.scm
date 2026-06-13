@@ -14,9 +14,9 @@
   #:use-module (gnu system vm)
   #:use-module (gnu services)
   #:use-module (gnu services networking)
-  #:use-module (btc services bitcoin)
-  #:use-module (btc services indexers)
-  #:use-module (btc packages nodes)
+  #:use-module (bitcoin services bitcoin)
+  #:use-module (bitcoin services indexers)
+  #:use-module (bitcoin packages nodes)
   #:use-module (guix gexp)
   #:export (%test-bitcoin-node %test-electrs))
 

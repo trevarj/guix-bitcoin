@@ -8,7 +8,7 @@
 ;;; option) any later version.
 ;;;
 ;;; guix-bitcoin --- Bitcoin ecosystem packages for GNU Guix
-(define-module (btc packages wallets)
+(define-module (bitcoin packages wallets)
   #:use-module (guix packages)
   #:use-module (guix git-download)
   #:use-module (guix gexp)

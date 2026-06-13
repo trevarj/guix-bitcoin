@@ -29,7 +29,7 @@
 ;;; After importing: dedupe crate+version across rows (a given
 ;;; crate-source must be defined once), keep the crate-source defs sorted
 ;;; alphabetically, and keep each app's define-cargo-inputs row sorted.
-(define-module (btc packages rust-crates)
+(define-module (bitcoin packages rust-crates)
   #:use-module (guix build-system cargo)
   #:use-module (guix packages)
   #:use-module (guix download)

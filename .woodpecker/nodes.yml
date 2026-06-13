@@ -3,10 +3,10 @@
 when:
   - event: [push]
     path:
-      include: ["btc/packages/nodes.scm", "btc/packages/indexers.scm",
-                "btc/packages/lightning.scm", "btc/packages/wallets.scm",
-                "btc/packages/rust-bitcoin.scm", "btc/packages/rust-crates.scm",
-                "btc/packages/explorers.scm",
+      include: ["bitcoin/packages/nodes.scm", "bitcoin/packages/indexers.scm",
+                "bitcoin/packages/lightning.scm", "bitcoin/packages/wallets.scm",
+                "bitcoin/packages/rust-bitcoin.scm", "bitcoin/packages/rust-crates.scm",
+                "bitcoin/packages/explorers.scm",
                 "etc/ci-packages.scm"]
   - event: manual
 

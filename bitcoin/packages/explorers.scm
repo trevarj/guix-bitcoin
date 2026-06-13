@@ -8,7 +8,7 @@
 ;;; option) any later version.
 ;;;
 ;;; guix-bitcoin --- Bitcoin ecosystem packages for GNU Guix
-(define-module (btc packages explorers)
+(define-module (bitcoin packages explorers)
   #:use-module (guix packages)
   #:use-module (guix git-download)
   #:use-module (guix gexp)
@@ -19,8 +19,8 @@
   #:use-module (gnu packages bash)
   #:use-module (gnu packages node)
   #:use-module (gnu packages rsync)
-  #:use-module (btc build npm-vendor)
-  #:use-module (btc packages rust-crates))
+  #:use-module (bitcoin build npm-vendor)
+  #:use-module (bitcoin packages rust-crates))
 
 (define %mempool-version
   "3.3.1")

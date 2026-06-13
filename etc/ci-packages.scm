@@ -1,13 +1,13 @@
 ;;; Named package sets for CI and local driver use.
 ;;; Usage: guix build -L . -e '(@ (etc ci-packages) %light-packages)' …
 (define-module (etc ci-packages)
-  #:use-module (btc packages libraries)
-  #:use-module (btc packages nodes)
-  #:use-module (btc packages indexers)
-  #:use-module (btc packages wallets)
-  #:use-module (btc packages lightning)
-  #:use-module (btc packages rust-bitcoin)
-  #:use-module (btc packages explorers)
+  #:use-module (bitcoin packages libraries)
+  #:use-module (bitcoin packages nodes)
+  #:use-module (bitcoin packages indexers)
+  #:use-module (bitcoin packages wallets)
+  #:use-module (bitcoin packages lightning)
+  #:use-module (bitcoin packages rust-bitcoin)
+  #:use-module (bitcoin packages explorers)
   #:export (%light-packages %node-packages
                             %indexer-packages
                             %wallet-packages

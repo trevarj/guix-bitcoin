@@ -116,7 +116,7 @@ pull_if_needed() {
     # derivations (no cross-machine hash constraints), so an exact
     # toolchain match is not required.
     if guix repl -L . >/dev/null 2>&1 <<'EOF'
-(use-modules (etc ci-packages) (btc packages rust-crates))
+(use-modules (etc ci-packages) (bitcoin packages rust-crates))
 EOF
     then
         say "installed guix loads the channel; skipping guix pull"

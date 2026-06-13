@@ -25,10 +25,10 @@ Then `guix pull`.
 
 ## Packages
 
-See `btc/packages/`. Phase 1 ships: libsecp256k1, libsecp256k1-zkp,
+See `bitcoin/packages/`. Phase 1 ships: libsecp256k1, libsecp256k1-zkp,
 univalue, bitcoin-core, bitcoin-knots.
 
 ## Services
 
-`bitcoin-node-service-type` in `(btc services bitcoin)` runs bitcoind
+`bitcoin-node-service-type` in `(bitcoin services bitcoin)` runs bitcoind
 (Core or Knots) on Guix System. See module docstrings for fields.

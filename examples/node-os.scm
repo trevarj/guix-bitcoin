@@ -1,6 +1,6 @@
 ;; Minimal Guix System running a regtest bitcoin node.
 ;; Build check: guix system build -L . examples/node-os.scm
-(use-modules (gnu) (btc services bitcoin) (btc packages nodes))
+(use-modules (gnu) (bitcoin services bitcoin) (bitcoin packages nodes))
 (use-service-modules base networking ssh)
 
 (operating-system
@@ -24,8 +24,8 @@
                     (network 'regtest)
                     (zmq-pub-raw-block "tcp://127.0.0.1:28332")))
           ;; Full-stack example (uncomment and adapt; also import the
-          ;; service modules above: (btc services indexers) and
-          ;; (btc services lightning)).  These daemons read the node's RPC
+          ;; service modules above: (bitcoin services indexers) and
+          ;; (bitcoin services lightning)).  These daemons read the node's RPC
           ;; cookie via the shared "bitcoin" group, so they require
           ;; bitcoin-node-service-type on the same system.
           ;; (service electrs-service-type
@@ -36,7 +36,7 @@
           ;; (service clightning-service-type
           ;;          (clightning-configuration (network 'regtest)))
           ;; Explorer stack (uncomment and adapt; also import the service
-          ;; modules above: (btc services mempool) and (gnu services
+          ;; modules above: (bitcoin services mempool) and (gnu services
           ;; databases) and (gnu services web), plus add mysql-service-type
           ;; and nginx-service-type to the system).  The backend needs the
           ;; node, an Electrum server (electrs/fulcrum), and MariaDB:

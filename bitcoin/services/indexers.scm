@@ -8,13 +8,13 @@
 ;;; option) any later version.
 ;;;
 ;;; guix-bitcoin --- Bitcoin ecosystem services for Guix System
-(define-module (btc services indexers)
+(define-module (bitcoin services indexers)
   #:use-module (gnu services)
   #:use-module (gnu services configuration)
   #:use-module (gnu services shepherd)
   #:use-module (gnu system accounts)
   #:use-module (gnu system shadow)
-  #:use-module (btc packages indexers)
+  #:use-module (bitcoin packages indexers)
   #:use-module (guix gexp)
   #:use-module (guix packages)
   #:use-module (guix records)

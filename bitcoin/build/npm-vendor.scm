@@ -8,7 +8,7 @@
 ;;; option) any later version.
 ;;;
 ;;; guix-bitcoin --- fixed-output origins for vendored npm node_modules.
-(define-module (btc build npm-vendor)
+(define-module (bitcoin build npm-vendor)
   #:use-module (guix gexp)
   #:use-module (guix base32)
   #:use-module (guix modules)

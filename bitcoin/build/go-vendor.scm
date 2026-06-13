@@ -8,7 +8,7 @@
 ;;; option) any later version.
 ;;;
 ;;; guix-bitcoin --- fixed-output origins for Go module dependencies.
-(define-module (btc build go-vendor)
+(define-module (bitcoin build go-vendor)
   #:use-module (guix gexp)
   #:use-module (guix base32)
   #:use-module (guix modules)

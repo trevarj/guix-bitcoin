@@ -8,12 +8,12 @@
 ;;; option) any later version.
 ;;;
 ;;; guix-bitcoin --- Bitcoin ecosystem packages for GNU Guix
-(define-module (btc packages rust-bitcoin)
+(define-module (bitcoin packages rust-bitcoin)
   #:use-module (guix packages)
   #:use-module (guix build-system cargo)
   #:use-module ((guix licenses)
                 #:prefix license:)
-  #:use-module (btc packages rust-crates))
+  #:use-module (bitcoin packages rust-crates))
 
 (define-public rust-bitcoin
   (package

@@ -8,7 +8,7 @@
 ;;; option) any later version.
 ;;;
 ;;; guix-bitcoin --- Bitcoin ecosystem packages for GNU Guix
-(define-module (btc packages lightning)
+(define-module (bitcoin packages lightning)
   #:use-module (guix packages)
   #:use-module (guix git-download)
   #:use-module (guix gexp)
@@ -30,7 +30,7 @@
   #:use-module (gnu packages python-xyz)
   #:use-module (gnu packages sqlite)
   #:use-module (gnu packages web)
-  #:use-module (btc build go-vendor))
+  #:use-module (bitcoin build go-vendor))
 
 (define-public core-lightning
   (package

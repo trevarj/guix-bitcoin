@@ -8,7 +8,7 @@
 ;;; option) any later version.
 ;;;
 ;;; guix-bitcoin --- Bitcoin ecosystem packages for GNU Guix
-(define-module (btc packages indexers)
+(define-module (bitcoin packages indexers)
   #:use-module (guix packages)
   #:use-module (guix git-download)
   #:use-module (guix gexp)
@@ -22,7 +22,7 @@
   #:use-module (gnu packages llvm)
   #:use-module (gnu packages pkg-config)
   #:use-module (gnu packages qt)
-  #:use-module (btc packages rust-crates))
+  #:use-module (bitcoin packages rust-crates))
 
 (define-public fulcrum
   (package

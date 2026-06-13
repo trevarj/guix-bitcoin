@@ -8,7 +8,7 @@
 ;;; option) any later version.
 ;;;
 ;;; guix-bitcoin --- Bitcoin ecosystem packages for GNU Guix
-(define-module (btc packages nodes)
+(define-module (bitcoin packages nodes)
   #:use-module (guix packages)
   #:use-module (guix download)
   #:use-module (guix gexp)
