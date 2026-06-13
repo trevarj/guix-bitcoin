@@ -5,6 +5,24 @@
 - One logical change per commit, GNU ChangeLog-style messages
   (see existing history).
 
+## Merging a pull request (maintainer)
+The channel requires every commit to be signed by an authorized key, and CI
+cannot sign as the maintainer — so a contributor's commits arrive unsigned.
+Do **not** `git merge` them directly (the `post-merge` / `pre-push`
+`guix git authenticate` hooks will reject the unsigned commits). Instead
+replay them onto master, which signs each commit with your key while keeping
+the contributor as the commit Author:
+
+```sh
+etc/merge-pr.sh <PR-number>          # GitHub PR, from the 'github' remote
+etc/merge-pr.sh origin pull/7/head   # or any remote + ref
+```
+
+The result: each commit is `Author: <contributor>`, `Commit: <you>`, signed
+by your key and accepted by `guix git authenticate`. Review with `git show`,
+then push to both remotes. (Set it up once: `git config commit.gpgsign true`
+and `git config user.signingkey <your-key>`.)
+
 ## Version bump checklist
 1. Check upstream release announcement and changelog.
 2. Download the release tarball; verify the upstream signature:
