@@ -13,13 +13,14 @@
   #:use-module (guix git-download)
   #:use-module (guix gexp)
   #:use-module (guix build-system gnu)
+  #:use-module (guix build-system cargo)
   #:use-module ((guix licenses)
                 #:prefix license:)
   #:use-module (gnu packages bash)
   #:use-module (gnu packages node)
   #:use-module (gnu packages rsync)
   #:use-module (btc build npm-vendor)
-  #:use-module (btc build napi-vendor))
+  #:use-module (btc packages rust-crates))
 
 (define %mempool-version
   "3.3.1")
@@ -40,17 +41,84 @@
    #:hash "01jqchx302q9fjjlsglzc9krq61vbilr2xzxjz633050ia6f49p2"
    #:node node-lts))
 
-(define %backend-rust-gbt
-  ;; The backend's 'rust-gbt' module is a napi-rs native addon living in the
-  ;; mempool tree at rust/gbt; package.json wires it as "file:./rust-gbt" and
-  ;; an upstream preinstall script builds it.  Our npm FOD installs with
-  ;; --ignore-scripts, so we build the addon here (cdylib + generated
-  ;; index.js/index.d.ts) and drop it into backend/rust-gbt before tsc runs.
-  (napi-vendored-module #:name "mempool-rust-gbt"
-   #:source %mempool-source
-   #:subdirectory "rust/gbt"
-   #:hash "1dmsnxk28hgixjh83hk6ghgqyym2rckd0rmcyywcpyjb6r9clac0"
-   #:node node-lts))
+(define %mempool-rust-gbt-source
+  ;; cargo-build-system needs Cargo.toml at the source root, but the gbt crate
+  ;; lives at rust/gbt in the mempool tree.  Narrow the checkout to that
+  ;; subdirectory: hoist its contents to the top level and drop everything
+  ;; else.  (The snippet runs on the unpacked checkout copy.)
+  (origin
+    (inherit %mempool-source)
+    (modules '((guix build utils)
+               (ice-9 ftw)
+               (srfi srfi-1)))
+    (snippet
+     #~(begin
+         ;; Move rust/gbt/* (including dotfiles) to the top level, then
+         ;; remove every other top-level entry.
+         (let* ((gbt "rust/gbt")
+                (keep (scandir gbt
+                               (lambda (n)
+                                 (not (member n '("." "..")))))))
+           (for-each (lambda (entry)
+                       (rename-file (string-append gbt "/" entry) entry))
+                     keep)
+           ;; Remove everything that wasn't hoisted (including rust/).
+           (for-each delete-file-recursively
+                     (scandir "."
+                              (lambda (n)
+                                (and (not (member n '("." "..")))
+                                     (not (member n keep)))))))))))
+
+(define-public mempool-rust-gbt
+  ;; The mempool backend's 'rust-gbt' module is a napi-rs native addon: the
+  ;; gbt crate (rust/gbt) compiled to a cdylib, plus the @napi-rs/cli-generated
+  ;; index.js loader / index.d.ts types and the crate's package.json.  package
+  ;; .json wires it into the backend as the "file:./rust-gbt" dependency.
+  ;;
+  ;; We build the cdylib with a regular cargo derivation (no cross-machine FOD
+  ;; hash constraint) and pair it with the version-stable generated loader
+  ;; files shipped as channel aux-files.  `cargo build --release` of a napi
+  ;; crate yields a working cdylib on its own; the @napi-rs/cli only renames
+  ;; and wraps it (which we do in the install phase).
+  (package
+    (name "mempool-rust-gbt")
+    (version %mempool-version)
+    (source %mempool-rust-gbt-source)
+    (build-system cargo-build-system)
+    (arguments
+     (list
+      #:install-source? #f
+      ;; The crate's cargo tests don't matter here; the cdylib is the artifact.
+      #:tests? #f
+      #:phases
+      #~(modify-phases %standard-phases
+          (replace 'install
+            (lambda _
+              (let* ((dir (string-append #$output "/lib/mempool-rust-gbt")))
+                (mkdir-p dir)
+                ;; index.js probes ./gbt.linux-x64-gnu.node on x86_64-linux-gnu;
+                ;; install the cdylib (target/release/libgbt.so) under that
+                ;; napi platform name.
+                (install-file "target/release/libgbt.so" dir)
+                (rename-file (string-append dir "/libgbt.so")
+                             (string-append dir "/gbt.linux-x64-gnu.node"))
+                ;; The crate's own package.json ("file:./rust-gbt" metadata).
+                (install-file "package.json" dir)
+                ;; Generated napi loader + type declarations (channel aux-files).
+                (copy-file #$(local-file "aux-files/mempool-rust-gbt/index.js")
+                           (string-append dir "/index.js"))
+                (copy-file #$(local-file "aux-files/mempool-rust-gbt/index.d.ts")
+                           (string-append dir "/index.d.ts"))))))))
+    (inputs (lookup-cargo-inputs 'mempool-rust-gbt))
+    (home-page "https://mempool.space/")
+    (synopsis "getBlockTemplate algorithm reimplementation for mempool")
+    (description
+     "@code{rust-gbt} is the mempool backend's napi-rs native addon: an
+efficient Rust reimplementation of Bitcoin's getBlockTemplate algorithm,
+compiled to a Node native module (@file{gbt.linux-x64-gnu.node}) with the
+generated loader and type declarations the backend's @code{file:./rust-gbt}
+dependency resolves to.")
+    (license license:agpl3)))
 
 (define %frontend-node-modules
   (npm-vendored-modules #:name "mempool-frontend"
@@ -88,7 +156,9 @@
                 ;; "file:./rust-gbt" dependency); populate that target with
                 ;; the pre-built napi addon so tsc resolves 'rust-gbt'.
                 (mkdir-p "rust-gbt")
-                (copy-recursively #$%backend-rust-gbt "rust-gbt")
+                (copy-recursively
+                 #$(file-append mempool-rust-gbt "/lib/mempool-rust-gbt")
+                 "rust-gbt")
                 ;; Replace the file: dependency's symlink with a real
                 ;; copy so the installed tree is self-contained (the
                 ;; symlink would dangle under lib/mempool-backend).

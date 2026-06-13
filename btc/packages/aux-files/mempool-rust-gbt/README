@@ -1,0 +1,24 @@
+NAPI loader boilerplate for mempool's rust-gbt native addon
+===========================================================
+
+`index.js` and `index.d.ts` here are the @napi-rs/cli-generated loader and
+TypeScript type declarations for the mempool backend's `rust-gbt` module
+(crate `gbt`, package.json version 3.0.1).  Upstream emits them with
+`napi build` from the `#[napi]` annotations in rust/gbt/src; they are
+version-stable across builds (pure generated boilerplate plus the API
+surface: `GbtGenerator`, `GbtResult`).
+
+Provenance: extracted from the previous fixed-output derivation's output
+  /gnu/store/...-mempool-rust-gbt-napi-module/{index.js,index.d.ts}
+which ran `napi build --platform --release --strip` on
+mempool v3.3.1's rust/gbt (Cargo.toml name "gbt").
+
+We now build the cdylib with a regular cargo-build-system derivation (no
+cross-machine FOD hash constraint) and ship these two generated files as
+static channel artifacts.  `index.js` probes `./gbt.linux-x64-gnu.node`
+for the x86_64-linux-gnu platform, so the mempool-rust-gbt package installs
+the compiled cdylib (target/release/libgbt.so) under that name.
+
+Regenerate these only on a rust-gbt version bump that changes the napi API:
+run `napi build` against the new rust/gbt checkout and copy the emitted
+index.js / index.d.ts here.
