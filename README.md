@@ -147,6 +147,11 @@ gh workflow run build-set.yml -f package_set=nodes
 # sets: light | nodes | indexers | wallets | lightning | rust | explorers | all
 ```
 
+A monthly job (`.github/workflows/refresh.yml`) runs `guix refresh` over the
+packages and opens a tracking issue listing what is outdated. Sources with no
+automatic updater (the node and explorer download URLs) are flagged for a
+manual look. Run it any time with `gh workflow run refresh.yml`.
+
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md).

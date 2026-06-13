@@ -1,0 +1,67 @@
+# Monthly upstream-release check.  Runs `guix refresh` over the channel's
+# packages (etc/ci-refresh-report.sh) and opens a GitHub issue assigned to
+# the maintainer summarising what is outdated -- GitHub emails the assignee
+# via normal notifications, so no SMTP secret is needed.
+#
+# Report-only: bumps still need a signed commit (channel authentication)
+# and, for vendored packages, manual hash harvesting, so this does not open
+# PRs.  GitHub-only on purpose -- mirroring to Forgejo would open a second
+# issue and double the email.
+#
+# Trigger manually any time:  gh workflow run refresh.yml
+name: refresh
+on:
+  schedule:
+    - cron: "0 6 1 * *" # 06:00 UTC on the 1st of each month
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    container:
+      image: debian:bookworm
+      options: --security-opt seccomp=unconfined
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/cache/restore@v4
+        with:
+          path: |
+            /gnu
+            /var/guix
+            /root/.config/guix
+            /root/.cache/guix
+          key: guix-${{ hashFiles('etc/ci-guix-channels.scm', 'etc/ci-setup-guix.sh') }}
+      - name: Generate update report
+        run: |
+          ./etc/ci-setup-guix.sh ensure
+          ./etc/ci-refresh-report.sh | tee refresh-report.md >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: refresh-report
+          path: refresh-report.md
+
+  notify:
+    needs: report
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: refresh-report
+          path: .
+      - name: Open tracking issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          gh label create package-updates --repo "$REPO" \
+            --color FBCA04 --description "Monthly upstream update check" --force || true
+          gh issue create --repo "$REPO" \
+            --title "Package updates — $(date -u +%Y-%m)" \
+            --body-file refresh-report.md \
+            --assignee trevarj \
+            --label package-updates
