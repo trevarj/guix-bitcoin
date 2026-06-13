@@ -21,6 +21,8 @@ release_repo() {
     case "$1" in
         bitcoin-core)  echo "bitcoin/bitcoin" ;;
         bitcoin-knots) echo "bitcoinknots/bitcoin" ;;
+        mempool-backend|mempool-frontend|mempool-rust-gbt)
+                       echo "mempool/mempool" ;;
         *)             echo "" ;;
     esac
 }
@@ -36,15 +38,6 @@ github_latest() {
               | grep -oE '"tag_name"[[:space:]]*:[[:space:]]*"[^"]+"' \
               | head -1 | grep -oE '"[^"]+"$' | tr -d '"')
     printf '%s' "${tag#v}"
-}
-
-# Upstream release pages for the remaining packages guix refresh cannot track.
-manual_url() {
-    case "$1" in
-        mempool-backend|mempool-frontend|mempool-rust-gbt)
-                       echo "https://github.com/mempool/mempool/releases" ;;
-        *)             echo "" ;;
-    esac
 }
 
 # Print "name version" for each package in a ci-packages.scm list variable.
@@ -117,14 +110,8 @@ for entry in $SETS; do
         elif printf '%s\n' "$out" | grep -qE "latest version of $name\$"; then
             printf -- '- ✅ %s %s\n' "$name" "$version"
         else
-            url=$(manual_url "$name")
-            if [ -n "$url" ]; then
-                printf -- '- 🔍 **%s** %s — no auto-updater; check <%s>\n' \
-                       "$name" "$version" "$url"
-            else
-                printf -- '- 🔍 **%s** %s — updater could not determine latest\n' \
-                       "$name" "$version"
-            fi
+            printf -- '- 🔍 **%s** %s — updater could not determine latest\n' \
+                   "$name" "$version"
         fi
     done >> /tmp/refresh-report.md
     printf '\n' >> /tmp/refresh-report.md

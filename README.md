@@ -147,9 +147,10 @@ gh workflow run build-set.yml -f package_set=nodes
 ```
 
 A monthly job (`.github/workflows/refresh.yml`) runs `guix refresh` over the
-packages and opens a tracking issue listing what is outdated. Sources with no
-automatic updater (the node and explorer download URLs) are flagged for a
-manual look. Run it any time with `gh workflow run refresh.yml`.
+packages — plus a GitHub Releases check for the node and explorer packages
+whose custom download URLs `guix refresh` cannot follow (bitcoin-core,
+bitcoin-knots, mempool) — and opens a tracking issue listing what is outdated.
+Run it any time with `gh workflow run refresh.yml`.
 
 ## Contributing
 
