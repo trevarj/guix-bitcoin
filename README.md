@@ -1,7 +1,7 @@
 # guix-bitcoin
 
 [![check](https://github.com/trevarj/guix-bitcoin/actions/workflows/check.yml/badge.svg)](https://github.com/trevarj/guix-bitcoin/actions/workflows/check.yml)
-[![license: GPL-3.0+](https://img.shields.io/badge/license-GPL--3.0--or--later-blue.svg)](#license)
+[![license: GPL-3.0+](https://img.shields.io/badge/license-GPL--3.0--or--later-blue.svg)](LICENSE)
 [![channel: authenticated](https://img.shields.io/badge/channel-authenticated-success.svg)](#installation)
 [![substitutes: build from source](https://img.shields.io/badge/substitutes-build%20from%20source-orange.svg)](#building--substitutes)
 
@@ -150,5 +150,5 @@ See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 
-GPL-3.0-or-later. The package and service modules carry the GNU GPL v3-or-later
-header.
+GPL-3.0-or-later. See [LICENSE](LICENSE) for the full text; the package and
+service modules each carry the GNU GPL v3-or-later header.
