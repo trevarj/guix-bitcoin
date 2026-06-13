@@ -17,8 +17,8 @@ trust. Guile modules live under the `(bitcoin packages ...)` and
 All package sets currently build successfully, both VM system tests pass, and
 the example operating system builds. The table reflects verified local builds
 as of 2026-06-13. Live per-commit CI (the badge above) runs lint plus the
-`light` set on every push; heavier sets are path-gated or built on demand (see
-[Building](#building--substitutes)).
+`light` set on every push; heavier sets build automatically when their files
+change, or on demand (see [Building](#building--substitutes)).
 
 | Set         | Packages                                                                 | Status |
 |-------------|--------------------------------------------------------------------------|:------:|
@@ -136,8 +136,11 @@ You can build any named set locally the same way CI does:
 ```
 
 CI (`.github/workflows/check.yml`) lints and builds the `light` set on every
-push using a cached Guix. Heavier sets are path-gated (`build-set.yml` triggers
-on changes under `bitcoin/packages/`) or dispatched on demand:
+push using a cached Guix. Heavier sets build automatically when their files
+change: `build-set.yml` maps each changed file to its set
+(`etc/ci-changed-sets.sh`) and builds exactly those sets in parallel — e.g. a
+commit touching `bitcoin/packages/lightning.scm` builds only the `lightning`
+set. You can also dispatch a set on demand:
 
 ```sh
 gh workflow run build-set.yml -f package_set=nodes

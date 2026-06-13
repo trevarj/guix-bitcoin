@@ -1,6 +1,13 @@
 # GitHub Actions mirror of .forgejo/workflows/build-set.yml.
 # Heavy package-set builds on free public runners (6 h job limit fits
-# bitcoin-core incl. functional tests).  Dispatch:
+# bitcoin-core incl. functional tests).
+#
+# On push: a 'detect' job maps the changed files to ci-build.sh set names
+# (etc/ci-changed-sets.sh) and the 'build' job fans out over exactly those
+# sets in parallel -- touching bitcoin/packages/explorers.scm builds the
+# explorers set, not everything.
+#
+# Manual dispatch builds one chosen set:
 #   gh workflow run build-set.yml -f package_set=<set>
 # Sets: light|nodes|indexers|wallets|lightning|rust|explorers|all
 name: build-set
@@ -9,7 +16,10 @@ on:
     branches: [master]
     paths:
       - "bitcoin/packages/**"
+      - "bitcoin/build/**"
       - "etc/ci-packages.scm"
+      - "etc/ci-build.sh"
+      - "etc/ci-changed-sets.sh"
   workflow_dispatch:
     inputs:
       package_set:
@@ -18,7 +28,47 @@ on:
         default: "nodes"
 
 jobs:
+  detect:
+    # Decide which sets to build.  Plain runner (git + jq available); no
+    # Guix needed here.
+    runs-on: ubuntu-latest
+    outputs:
+      sets: ${{ steps.detect.outputs.sets }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: detect
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            names="${{ inputs.package_set }}"
+          else
+            before='${{ github.event.before }}'
+            if printf '%s' "$before" | grep -qE '^0+$'; then
+              # New branch / force push / no parent: diff against HEAD~1.
+              changed=$(git diff --name-only HEAD~1 HEAD 2>/dev/null || true)
+            else
+              changed=$(git diff --name-only "$before" "${{ github.sha }}")
+            fi
+            names=$(printf '%s\n' "$changed" | ./etc/ci-changed-sets.sh)
+          fi
+          # Expand the umbrella "all" into concrete sets so the build
+          # matrix runs them in parallel (one sequential "all" job would
+          # exceed the per-job timeout).
+          case " $names " in
+            *" all "*) names="light nodes wallets indexers lightning rust explorers" ;;
+          esac
+          echo "selected sets: ${names:-(none)}"
+          sets=$(printf '%s\n' $names | jq -R . | jq -sc 'map(select(length > 0))')
+          echo "sets=$sets" >> "$GITHUB_OUTPUT"
+
   build:
+    needs: detect
+    if: ${{ needs.detect.outputs.sets != '[]' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        set: ${{ fromJSON(needs.detect.outputs.sets) }}
     runs-on: ubuntu-latest
     container:
       image: debian:bookworm
@@ -37,4 +87,4 @@ jobs:
       - name: Ensure Guix and build package set
         run: |
           ./etc/ci-setup-guix.sh ensure
-          ./etc/ci-build.sh "${{ inputs.package_set || 'nodes' }}"
+          ./etc/ci-build.sh "${{ matrix.set }}"
