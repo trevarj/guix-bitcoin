@@ -88,26 +88,3 @@ commitments, range proofs, MuSig, adaptor signatures and other
 zero-knowledge-proof building blocks.  Upstream tags no releases, so this
 package pins a vetted commit.")
       (license license:expat))))
-
-(define-public univalue
-  (package
-    (name "univalue")
-    (version "1.1.1")
-    (source
-     (origin
-       (method git-fetch)
-       (uri (git-reference
-             (url "https://github.com/jgarzik/univalue")
-             (commit (string-append "v" version))))
-       (file-name (git-file-name name version))
-       (sha256
-        (base32 "1yp0xaizfh6j94k9ld9zhz8qxzdf2bb33hc2czhgxf32df9qha7x"))))
-    (build-system gnu-build-system)
-    (native-inputs (list autoconf automake libtool))
-    (home-page "https://github.com/jgarzik/univalue")
-    (synopsis "Universal JSON value class for C++")
-    (description
-     "UniValue is a C++ library providing a universal JSON value type and
-encoder/decoder.  It was extracted from Bitcoin Core and remains a dependency
-of related Bitcoin tooling.")
-    (license license:expat)))

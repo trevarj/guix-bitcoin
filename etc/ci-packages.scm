@@ -17,7 +17,7 @@
                             %all-packages))
 
 (define %light-packages
-  (list libsecp256k1 libsecp256k1-zkp univalue))
+  (list libsecp256k1 libsecp256k1-zkp))
 
 (define %node-packages
   (list bitcoin-core bitcoin-knots))

@@ -22,7 +22,7 @@ change, or on demand (see [Building](#building--substitutes)).
 
 | Set         | Packages                                                                 | Status |
 |-------------|--------------------------------------------------------------------------|:------:|
-| `light`     | libsecp256k1, libsecp256k1-zkp, univalue                                 |   ✅   |
+| `light`     | libsecp256k1, libsecp256k1-zkp                                            |   ✅   |
 | `nodes`     | bitcoin-core, bitcoin-knots                                              |   ✅   |
 | `wallets`   | electrum, hwi                                                            |   ✅   |
 | `indexers`  | fulcrum, electrs                                                         |   ✅   |
@@ -40,7 +40,6 @@ with `guix system build`.
 |----------------------|--------------------------|-------------|
 | libsecp256k1         | 0.7.1                    | `light`     |
 | libsecp256k1-zkp     | commit-pinned            | `light`     |
-| univalue             | 1.1.1                    | `light`     |
 | bitcoin-core         | 31.0                     | `nodes`     |
 | bitcoin-knots        | 29.3.knots20260508       | `nodes`     |
 | electrum             | 4.7.2                    | `wallets`   |

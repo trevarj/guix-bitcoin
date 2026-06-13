@@ -15,12 +15,32 @@ set -eu
 # set name : ci-packages.scm variable
 SETS="light:%light-packages nodes:%node-packages wallets:%wallet-packages indexers:%indexer-packages lightning:%lightning-packages rust:%rust-packages explorers:%explorer-packages"
 
-# Upstream release pages for packages guix refresh cannot track.
+# GitHub repo whose Releases page tracks a package whose source URL guix
+# refresh cannot follow.  We query the releases API directly for these.
+release_repo() {
+    case "$1" in
+        bitcoin-core)  echo "bitcoin/bitcoin" ;;
+        bitcoin-knots) echo "bitcoinknots/bitcoin" ;;
+        *)             echo "" ;;
+    esac
+}
+
+# Latest published (non-prerelease) release version for a GitHub repo, with
+# any leading "v" stripped.  Empty on any failure (rate limit, network).
+github_latest() {
+    json=$(wget -qO- --timeout=20 \
+               --header='Accept: application/vnd.github+json' \
+               "https://api.github.com/repos/$1/releases/latest" 2>/dev/null) \
+        || return 0
+    tag=$(printf '%s' "$json" \
+              | grep -oE '"tag_name"[[:space:]]*:[[:space:]]*"[^"]+"' \
+              | head -1 | grep -oE '"[^"]+"$' | tr -d '"')
+    printf '%s' "${tag#v}"
+}
+
+# Upstream release pages for the remaining packages guix refresh cannot track.
 manual_url() {
     case "$1" in
-        bitcoin-core)  echo "https://bitcoincore.org/en/download/" ;;
-        bitcoin-knots) echo "https://bitcoinknots.org/" ;;
-        univalue)      echo "https://github.com/jgarzik/univalue/tags" ;;
         mempool-backend|mempool-frontend|mempool-rust-gbt)
                        echo "https://github.com/mempool/mempool/releases" ;;
         *)             echo "" ;;
@@ -63,6 +83,33 @@ for entry in $SETS; do
     printf '## %s\n\n' "$set_name" >> /tmp/refresh-report.md
     printf '%s\n' "$nv" | while read -r name version; do
         [ -n "$name" ] || continue
+
+        # Packages tracked via the GitHub Releases API (custom download URLs
+        # guix refresh cannot follow, e.g. bitcoin-core, bitcoin-knots).
+        repo=$(release_repo "$name")
+        if [ -n "$repo" ]; then
+            latest=$(github_latest "$repo")
+            if [ -n "$latest" ]; then
+                if [ "$latest" = "$version" ]; then
+                    printf -- '- ✅ %s %s\n' "$name" "$version"
+                else
+                    newest=$(printf '%s\n%s\n' "$version" "$latest" | sort -V | tail -1)
+                    if [ "$newest" = "$latest" ]; then
+                        printf -- '- ⬆️ **%s** %s → %s available <https://github.com/%s/releases>\n' \
+                               "$name" "$version" "$latest" "$repo"
+                    else
+                        printf -- '- ✅ %s %s (ahead of upstream %s)\n' \
+                               "$name" "$version" "$latest"
+                    fi
+                fi
+                continue
+            fi
+            # API unreachable: fall back to a manual-check line with the link.
+            printf -- '- 🔍 **%s** %s — release check failed; see <https://github.com/%s/releases>\n' \
+                   "$name" "$version" "$repo"
+            continue
+        fi
+
         up=$(printf '%s\n' "$out" | grep -E "$name would be upgraded from" | head -1 || true)
         if [ -n "$up" ]; then
             detail=$(printf '%s\n' "$up" | sed 's/.*would be upgraded/available:/')
@@ -81,11 +128,13 @@ for entry in $SETS; do
         fi
     done >> /tmp/refresh-report.md
     printf '\n' >> /tmp/refresh-report.md
-
-    if printf '%s\n' "$out" | grep -qE 'would be upgraded from'; then
-        found_updates=true
-    fi
 done
+
+# Any ⬆️ list item (from guix refresh or the GitHub release check) means
+# action -- anchored to "- ⬆️" so the legend line does not count.
+if grep -qE '^- ⬆️' /tmp/refresh-report.md; then
+    found_updates=true
+fi
 
 {
     printf -- '---\n'
