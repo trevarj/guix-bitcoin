@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/assets/logo.png" alt="guix-bitcoin" width="900">
+  <img src="docs/assets/logo.png" alt="guix-bitcoin" width="400">
 </p>
 
 # guix-bitcoin
