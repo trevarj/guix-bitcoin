@@ -53,8 +53,11 @@
                                         "MariaDB database name.  Only ASCII letters, digits and underscore are
 allowed.")
                                        (db-user (string "mempool")
-                                        "MariaDB user (unix-socket authentication).  Only ASCII letters, digits
-and underscore are allowed.")
+                                        "MariaDB user.  Only ASCII letters, digits and underscore are
+allowed.")
+                                       (db-password (string "mempool")
+                                        "MariaDB password for @code{db-user}.  Only ASCII letters, digits and
+underscore are allowed.")
                                        (http-port (integer 8999)
                                         "Backend HTTP/WebSocket API port (proxied by nginx).")
                                        (nginx-server-name (string "_")
@@ -66,9 +69,11 @@ and underscore are allowed.")
 ;; MEMPOOL_CONFIG_FILE environment variable.  Key names below are verified
 ;; against backend/mempool-config.sample.json and backend/src/config.ts of
 ;; mempool v3.3.1: cookie RPC auth uses CORE_RPC.COOKIE (boolean) +
-;; COOKIE_PATH; the DATABASE block connects over a unix socket when
-;; DATABASE.SOCKET is non-empty (mysql2 socketPath), with an empty PASSWORD
-;; for unix_socket authentication.
+;; COOKIE_PATH; the DATABASE block connects over a unix socket
+;; (DATABASE.SOCKET, mysql2 socketPath) authenticating db-user with a
+;; password.  (mempool's mysql2 client does not support MariaDB's
+;; unix_socket auth plugin, so password auth is required even over the
+;; local socket.)
 (define (mempool-backend-config-file config)
   (match-record config <mempool-configuration>
     (network bitcoind-rpc-host
@@ -78,6 +83,7 @@ and underscore are allowed.")
              electrum-port
              db-name
              db-user
+             db-password
              http-port)
     (plain-file "mempool-config.json"
                 (string-append "{\n"
@@ -115,6 +121,11 @@ and underscore are allowed.")
                                "  },\n"
                                "  \"DATABASE\": {\n"
                                "    \"ENABLED\": true,\n"
+                               ;; The backend writes a PID lock file; default is
+                               ;; __dirname (its code dir), which is the
+                               ;; read-only store -> EROFS crash.  Point it at the
+                               ;; writable, mempool-owned state dir.
+                               "    \"PID_DIR\": \"/var/lib/mempool\",\n"
                                "    \"HOST\": \"localhost\",\n"
                                "    \"SOCKET\": \"/run/mysqld/mysqld.sock\",
 "
@@ -124,7 +135,9 @@ and underscore are allowed.")
                                "    \"USERNAME\": \""
                                db-user
                                "\",\n"
-                               "    \"PASSWORD\": \"\"\n"
+                               "    \"PASSWORD\": \""
+                               db-password
+                               "\"\n"
                                "  }\n"
                                "}\n"))))
 
@@ -140,63 +153,157 @@ and underscore are allowed.")
                            (char-numeric? c)
                            (char=? c #\_))) s)))
 
-;; MariaDB: create an empty DB owned by a unix-socket-authenticated user;
-;; the backend migrates its own schema on startup.  (gnu services
-;; databases) offers no declarative DB-provisioning extension, so do it in a
-;; one-shot Shepherd service running the mariadb client as the local root
-;; (socket authentication).
+;; Provision the mempool database and user.  Wait for MariaDB to actually
+;; accept socket connections before firing the SQL: the 'mysql' Shepherd
+;; service reports "started" when mariadbd launches, but it needs a moment
+;; more before it answers, and provisioning too early leaves the user
+;; uncreated -- the backend then loops on "Access denied".  CREATE OR REPLACE
+;; also repairs a stale user/password from a persisted data directory.
+(define (mempool-db-setup-program db-name db-user db-password)
+  (program-file "mempool-db-setup"
+                #~(begin
+                    (use-modules (ice-9 format))
+                    (define mysql
+                      #$(file-append mariadb "/bin/mysql"))
+                    (define (mysql* . args)
+                      (zero? (apply system* mysql "--protocol=socket" args)))
+                    (define sql
+                      (string-append "CREATE DATABASE IF NOT EXISTS `"
+                                     #$db-name
+                                     "`;"
+                                     "CREATE OR REPLACE USER '"
+                                     #$db-user
+                                     "'@'localhost' IDENTIFIED BY '"
+                                     #$db-password
+                                     "';"
+                                     "GRANT ALL PRIVILEGES ON `"
+                                     #$db-name
+                                     "`.* TO '"
+                                     #$db-user
+                                     "'@'localhost';"
+                                     "FLUSH PRIVILEGES;"))
+                    (let loop
+                      ((n 120))
+                      (cond
+                        ((mysql* "-e" "SELECT 1")
+                         (format #t
+                          "mempool-db-setup: mariadb ready; provisioning~%")
+                         (unless (mysql* "-e" sql)
+                           (error "mempool-db-setup: provisioning SQL failed")))
+                        ((zero? n)
+                         (error
+                          "mempool-db-setup: mariadb did not become ready"))
+                        (else (sleep 1)
+                              (loop (- n 1))))))))
+
+;; (gnu services databases) offers no declarative DB-provisioning extension,
+;; so run the provisioning program above as a one-shot, as the local root
+;; (socket auth).
 ;;
 ;; Note: this setup only ever creates and grants; it never revokes.  If
 ;; db-user is later renamed, the old user's privileges on the database are
 ;; not removed and must be cleaned up manually.
 (define (mempool-db-setup-service config)
   (match-record config <mempool-configuration>
-    (db-name db-user)
+    (db-name db-user db-password)
     (unless (and (valid-sql-identifier? db-name)
-                 (valid-sql-identifier? db-user))
-      (error "mempool: db-name and db-user must match [A-Za-z0-9_]+" db-name
-             db-user))
+                 (valid-sql-identifier? db-user)
+                 (valid-sql-identifier? db-password))
+      (error
+       "mempool: db-name, db-user and db-password must match [A-Za-z0-9_]+"
+       db-name db-user db-password))
     (shepherd-service (provision '(mempool-db-setup))
                       (requirement '(mysql))
                       (one-shot? #t)
                       (documentation
                        "Create the mempool MariaDB database and user.")
-                      (start #~(make-forkexec-constructor (list #$(file-append
-                                                                   mariadb
-                                                                   "/bin/mysql")
-                                                           "--protocol=socket"
-                                                           "-e"
-                                                           (string-append
-                                                            "CREATE DATABASE IF NOT EXISTS `"
-                                                            #$db-name
-                                                            "`;"
-                                                            "CREATE USER IF NOT EXISTS '"
-                                                            #$db-user
-                                                            "'@'localhost' IDENTIFIED VIA unix_socket;"
-                                                            "GRANT ALL PRIVILEGES ON `"
-                                                            #$db-name
-                                                            "`.* TO '"
-                                                            #$db-user
-                                                            "'@'localhost';"
-                                                            "FLUSH PRIVILEGES;"))
+                      (start #~(make-forkexec-constructor (list #$(mempool-db-setup-program
+                                                                   db-name
+                                                                   db-user
+                                                                   db-password))
                                 #:user "root"
                                 #:log-file "/var/log/mempool-db-setup.log")))))
 
+;; Wrap the backend launch in a readiness gate.  A shepherd 'requirement'
+;; only guarantees a dependency's process has *started*, not that it is
+;; *serving*: electrs opens its Electrum port a moment after its process
+;; starts.  Without this gate the backend connects, fails, exits, and
+;; shepherd disables it after a few rapid respawns -- before electrs is
+;; ready.  Wait for the mysql socket, the bitcoind cookie and the Electrum
+;; port to be reachable, then exec the daemon (inheriting MEMPOOL_CONFIG_FILE
+;; from the shepherd environment).
+(define (mempool-backend-program config)
+  (match-record config <mempool-configuration>
+    (backend-package electrum-host electrum-port bitcoind-cookie)
+    (program-file "mempool-backend-start"
+                  #~(begin
+                      (use-modules (ice-9 format))
+                      (define (port-open? host port)
+                        (let ((s (socket PF_INET SOCK_STREAM 0)))
+                          (catch #t
+                                 (lambda ()
+                                   (connect s AF_INET
+                                            (inet-pton AF_INET host) port)
+                                   (close-port s) #t)
+                                 (lambda _
+                                   (false-if-exception (close-port s)) #f))))
+                      (define (wait-for what ready?)
+                        (let loop
+                          ((n 600))
+                          (cond
+                            ((ready?)
+                             (format #t "mempool-backend: ~a ready~%" what))
+                            ((zero? n)
+                             (format #t
+                              "mempool-backend: timed out waiting for ~a~%"
+                              what))
+                            (else (sleep 1)
+                                  (loop (- n 1))))))
+                      (wait-for "mysql socket"
+                                (lambda ()
+                                  (file-exists? "/run/mysqld/mysqld.sock")))
+                      (wait-for "bitcoind cookie"
+                                (lambda ()
+                                  (file-exists? #$bitcoind-cookie)))
+                      (wait-for "electrum port"
+                                (lambda ()
+                                  (port-open? #$electrum-host
+                                              #$electrum-port)))
+                      (execl #$(file-append backend-package
+                                            "/bin/mempool-backend")
+                             "mempool-backend")))))
+
 (define (mempool-shepherd-service config)
   (match-record config <mempool-configuration>
-    (backend-package electrum-provision)
+    (electrum-provision)
     (let ((conf (mempool-backend-config-file config)))
       (list (mempool-db-setup-service config)
             (shepherd-service (provision '(mempool-backend))
-                              (requirement `(bitcoind bitcoind-cookie-access ,electrum-provision
-                                                      mysql mempool-db-setup
+                              (requirement `(bitcoind bitcoind-cookie-access
+                                                      ,electrum-provision
+                                                      mysql
+                                                      mempool-db-setup
                                                       user-processes
                                                       networking))
                               (documentation
                                "Run the mempool explorer backend.")
-                              (start #~(make-forkexec-constructor (list #$(file-append
-                                                                           backend-package
-                                                                           "/bin/mempool-backend"))
+                              ;; The backend can still exit during early boot
+                              ;; (e.g. before the chain is fully seeded and
+                              ;; txindexed).  Shepherd disables a service that
+                              ;; respawns more than its default limit -- 5 times
+                              ;; in 7 seconds -- and the default 0.1s delay blows
+                              ;; past that instantly.  A 5s delay caps respawns
+                              ;; at ~2 per 7s window, well under the limit, so
+                              ;; the backend is never auto-disabled: it keeps
+                              ;; retrying (giving the chain time to seed) until
+                              ;; it stays up.  (Only respawn-delay is set; the
+                              ;; Guix record splices respawn-limit's pair into
+                              ;; code position, which fails to compile -- a
+                              ;; number lowers cleanly.)
+                              (respawn? #t)
+                              (respawn-delay 30)
+                              (start #~(make-forkexec-constructor (list #$(mempool-backend-program
+                                                                           config))
                                         #:user "mempool"
                                         #:group "bitcoin"
                                         #:environment-variables (list (string-append
@@ -234,17 +341,34 @@ and underscore are allowed.")
     (frontend-package http-port nginx-server-name nginx-listen)
     (list (nginx-server-configuration (server-name (list nginx-server-name))
                                       (listen (list nginx-listen))
-                                      ;; Angular --localize output: source locale at the root, other
-                                      ;; locales in per-locale subdirectories.
+                                      ;; mempool's Angular --localize build nests EVERY locale
+                                      ;; (including the en-US source locale) under
+                                      ;; browser/<locale>/, with shared static assets in
+                                      ;; browser/resources/.  There is no index.html at the
+                                      ;; browser/ root, so the frontend locations below serve the
+                                      ;; en-US locale as the default (a bare "try_files $uri $uri/
+                                      ;; /index.html" here would 403, matching the bare root dir).
                                       (root (file-append frontend-package
                                              "/share/mempool-frontend/mempool/browser"))
-                                      (try-files (list "$uri" "$uri/"
-                                                       "/index.html"))
                                       ;; The proxy upstream is intentionally pinned to
                                       ;; 127.0.0.1:http-port: the backend binds loopback only.  The
                                       ;; electrum/bitcoind hosts are configurable, but the mempool
                                       ;; backend itself is expected to run locally.
                                       (locations (list (nginx-location-configuration
+                                                        ;; Default to the en-US locale: serve its
+                                                        ;; index.html at the site root (base href="/").
+                                                        (uri "= /")
+                                                        (body (list
+                                                               "try_files /en-US/index.html =404;")))
+                                                       (nginx-location-configuration
+                                                        ;; Try the literal path first (shared assets
+                                                        ;; like /resources/...), then the en-US-prefixed
+                                                        ;; path (JS bundles live in browser/en-US/), then
+                                                        ;; SPA-fallback to en-US/index.html.
+                                                        (uri "/")
+                                                        (body (list
+                                                               "try_files $uri /en-US/$uri /en-US/index.html;")))
+                                                       (nginx-location-configuration
                                                         (uri "/api/v1/ws")
                                                         (body (list (string-append
                                                                      "proxy_pass http://127.0.0.1:"
