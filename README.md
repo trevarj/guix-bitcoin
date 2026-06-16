@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/assets/logo.png" alt="guix-bitcoin" width="900">
+</p>
+
 # guix-bitcoin
 
 [![check](https://github.com/trevarj/guix-bitcoin/actions/workflows/check.yml/badge.svg)](https://github.com/trevarj/guix-bitcoin/actions/workflows/check.yml)
