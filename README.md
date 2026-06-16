@@ -20,19 +20,20 @@ trust. Guile modules live under the `(bitcoin packages ...)` and
 
 All package sets currently build successfully, both VM system tests pass, and
 the example operating system builds. The table reflects verified local builds
-as of 2026-06-16. Live per-commit CI (the badge above) runs lint plus the
-`light` set on every push; heavier sets build automatically when their files
-change, or on demand (see [Building](#building--substitutes)).
+as of 2026-06-16. The `light` badge tracks the per-push `check` workflow;
+heavier package-set badges track the shared changed-set `build-set` workflow,
+which runs automatically when those files change or on demand (see
+[Building](#building--substitutes)).
 
-| Set         | Packages                                                                 | Status |
-|-------------|--------------------------------------------------------------------------|:------:|
-| `light`     | libsecp256k1, libsecp256k1-zkp                                            |   ✅   |
-| `nodes`     | bitcoin-core, bitcoin-knots, btcd, floresta                              |   ✅   |
-| `wallets`   | electrum, hwi, hal, bdk-cli                                              |   ✅   |
-| `indexers`  | fulcrum, electrs                                                         |   ✅   |
-| `lightning` | core-lightning, lnd                                                     |   ✅   |
-| `rust`      | rust-bitcoin, rust-bitcoin-hashes, rust-secp256k1, rust-miniscript, rust-bdk-wallet |   ✅   |
-| `explorers` | mempool-backend, mempool-frontend (+ mempool-rust-gbt build dep)        |   ✅   |
+| Set         | Packages                                                                 | CI |
+|-------------|--------------------------------------------------------------------------|:--:|
+| `light`     | libsecp256k1, libsecp256k1-zkp                                            | [![light](https://img.shields.io/github/actions/workflow/status/trevarj/guix-bitcoin/check.yml?branch=master&label=light)](https://github.com/trevarj/guix-bitcoin/actions/workflows/check.yml) |
+| `nodes`     | bitcoin-core, bitcoin-knots, btcd, floresta                              | [![nodes](https://img.shields.io/github/actions/workflow/status/trevarj/guix-bitcoin/build-set.yml?branch=master&label=nodes)](https://github.com/trevarj/guix-bitcoin/actions/workflows/build-set.yml) |
+| `wallets`   | electrum, hwi, hal, bdk-cli                                              | [![wallets](https://img.shields.io/github/actions/workflow/status/trevarj/guix-bitcoin/build-set.yml?branch=master&label=wallets)](https://github.com/trevarj/guix-bitcoin/actions/workflows/build-set.yml) |
+| `indexers`  | fulcrum, electrs                                                         | [![indexers](https://img.shields.io/github/actions/workflow/status/trevarj/guix-bitcoin/build-set.yml?branch=master&label=indexers)](https://github.com/trevarj/guix-bitcoin/actions/workflows/build-set.yml) |
+| `lightning` | core-lightning, lnd                                                     | [![lightning](https://img.shields.io/github/actions/workflow/status/trevarj/guix-bitcoin/build-set.yml?branch=master&label=lightning)](https://github.com/trevarj/guix-bitcoin/actions/workflows/build-set.yml) |
+| `rust`      | rust-bitcoin, rust-bitcoin-hashes, rust-secp256k1, rust-miniscript, rust-bdk-wallet | [![rust](https://img.shields.io/github/actions/workflow/status/trevarj/guix-bitcoin/build-set.yml?branch=master&label=rust)](https://github.com/trevarj/guix-bitcoin/actions/workflows/build-set.yml) |
+| `explorers` | mempool-backend, mempool-frontend (+ mempool-rust-gbt build dep)        | [![explorers](https://img.shields.io/github/actions/workflow/status/trevarj/guix-bitcoin/build-set.yml?branch=master&label=explorers)](https://github.com/trevarj/guix-bitcoin/actions/workflows/build-set.yml) |
 
 VM system tests `%test-bitcoin-node` and `%test-electrs` (in
 `tests/bitcoin.scm`) pass in a marionette VM, and `examples/node-os.scm` builds
