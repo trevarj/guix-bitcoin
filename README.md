@@ -16,15 +16,15 @@ trust. Guile modules live under the `(bitcoin packages ...)` and
 
 All package sets currently build successfully, both VM system tests pass, and
 the example operating system builds. The table reflects verified local builds
-as of 2026-06-13. Live per-commit CI (the badge above) runs lint plus the
+as of 2026-06-16. Live per-commit CI (the badge above) runs lint plus the
 `light` set on every push; heavier sets build automatically when their files
 change, or on demand (see [Building](#building--substitutes)).
 
 | Set         | Packages                                                                 | Status |
 |-------------|--------------------------------------------------------------------------|:------:|
 | `light`     | libsecp256k1, libsecp256k1-zkp                                            |   ✅   |
-| `nodes`     | bitcoin-core, bitcoin-knots                                              |   ✅   |
-| `wallets`   | electrum, hwi                                                            |   ✅   |
+| `nodes`     | bitcoin-core, bitcoin-knots, btcd, floresta                              |   ✅   |
+| `wallets`   | electrum, hwi, hal, bdk-cli                                              |   ✅   |
 | `indexers`  | fulcrum, electrs                                                         |   ✅   |
 | `lightning` | core-lightning, lnd                                                     |   ✅   |
 | `rust`      | rust-bitcoin, rust-bitcoin-hashes, rust-secp256k1, rust-miniscript, rust-bdk-wallet |   ✅   |
@@ -42,8 +42,12 @@ with `guix system build`.
 | libsecp256k1-zkp     | commit-pinned            | `light`     |
 | bitcoin-core         | 31.0                     | `nodes`     |
 | bitcoin-knots        | 29.3.knots20260508       | `nodes`     |
+| btcd                 | 0.25.0                   | `nodes`     |
+| floresta             | 0.9.1                    | `nodes`     |
 | electrum             | 4.7.2                    | `wallets`   |
 | hwi                  | 3.2.0                    | `wallets`   |
+| hal                  | 0.11.0                   | `wallets`   |
+| bdk-cli              | 3.0.0                    | `wallets`   |
 | fulcrum              | 2.1.1                    | `indexers`  |
 | electrs              | 0.11.1                   | `indexers`  |
 | core-lightning       | 26.06.1                  | `lightning` |

@@ -11,19 +11,27 @@
 (define-module (bitcoin packages nodes)
   #:use-module (guix packages)
   #:use-module (guix download)
+  #:use-module (guix git-download)
   #:use-module (guix gexp)
   #:use-module (guix build-system cmake)
+  #:use-module (guix build-system gnu)
+  #:use-module (guix build-system cargo)
   #:use-module ((guix licenses)
                 #:prefix license:)
   #:use-module (gnu packages boost)
+  #:use-module (gnu packages cmake)
+  #:use-module (gnu packages golang)
   #:use-module (gnu packages libevent)
   #:use-module (gnu packages linux)
+  #:use-module (gnu packages llvm)
   #:use-module (gnu packages networking)
   #:use-module (gnu packages pkg-config)
   #:use-module (gnu packages serialization)
   #:use-module (gnu packages python)
   #:use-module (gnu packages sqlite)
-  #:use-module (gnu packages upnp))
+  #:use-module (gnu packages upnp)
+  #:use-module (bitcoin build go-vendor)
+  #:use-module (bitcoin packages rust-crates))
 
 (define-public bitcoin-core
   (package
@@ -54,7 +62,8 @@
                       (getenv "TMPDIR"))))
           (add-after 'check 'check-functional
             (lambda _
-              (invoke "python3" "./test/functional/test_runner.py"
+              (invoke "python3"
+                      "./test/functional/test_runner.py"
                       (string-append "--jobs="
                                      (number->string (parallel-job-count)))
                       ;; These two need IPv6 (::1), which build
@@ -111,7 +120,8 @@ ZeroMQ notification support, without the GUI.")
                       (getenv "TMPDIR"))))
           (add-after 'check 'check-functional
             (lambda _
-              (invoke "python3" "./test/functional/test_runner.py"
+              (invoke "python3"
+                      "./test/functional/test_runner.py"
                       (string-append "--jobs="
                                      (number->string (parallel-job-count)))
                       ;; These need IPv6 (::1), which build environments
@@ -132,3 +142,125 @@ node-policy configuration options.  This package provides
 @command{bitcoind} and companion tools, built with descriptor (SQLite)
 wallet and ZeroMQ support, without the GUI or legacy BDB wallet.")
     (license license:expat)))
+
+(define-public btcd
+  (let* ((version "0.25.0")
+         ;; btcd ships no in-tree vendor/, so dependencies are pulled by the
+         ;; fixed-output 'go mod vendor' helper.  This is the resulting nar
+         ;; hash; re-harvest it with etc/harvest-fod-hash.sh on version bumps.
+         (vendored-hash "074rwlhw3cgjn07q20apm0sndk8alh3z9j42ssxgv5l7l4lgxj2v")
+         (plain-source (origin
+                         (method git-fetch)
+                         (uri (git-reference
+                               (url "https://github.com/btcsuite/btcd")
+                               (commit (string-append "v" version))))
+                         (file-name (git-file-name "btcd" version))
+                         (sha256 (base32
+                                  "1rrwp2pwfijgkhwqck2i10dmj4593hbwqhxw6hhdqmg2lsm6irxd")))))
+    (package
+      (name "btcd")
+      (version version)
+      ;; The source is the plain checkout with a populated vendor/ directory,
+      ;; produced by the fixed-output 'go mod vendor' helper (origins compose
+      ;; here because computed-file is a valid file-like source).
+      (source
+       (go-mod-vendored-source #:name "btcd"
+                               #:source plain-source
+                               #:hash vendored-hash
+                               #:go go-1.25))
+      (build-system gnu-build-system)
+      (arguments
+       (list
+        #:tests? #f
+        #:phases
+        #~(modify-phases %standard-phases
+            (delete 'configure)
+            (replace 'build
+              (lambda _
+                (setenv "HOME" "/tmp")
+                (setenv "GOFLAGS" "-mod=vendor -trimpath")
+                ;; No cgo anywhere in the tree; build static, like lnd.
+                (setenv "CGO_ENABLED" "0")
+                ;; The btcd daemon is the module root (github.com/btcsuite/btcd)
+                ;; and btcctl lives under cmd/btcctl.
+                (invoke "go"
+                        "build"
+                        "-o"
+                        "btcd-bin/"
+                        "."
+                        "./cmd/btcctl")))
+            (replace 'install
+              (lambda _
+                (for-each (lambda (f)
+                            (install-file f
+                                          (string-append #$output "/bin")))
+                          '("btcd-bin/btcd" "btcd-bin/btcctl")))))))
+      (native-inputs (list go-1.25))
+      (home-page "https://github.com/btcsuite/btcd")
+      (synopsis "Bitcoin full-node implementation in Go")
+      (description
+       "btcd is an alternative full-node Bitcoin implementation written in Go.
+It downloads, validates and serves the block chain using the same rules as
+Bitcoin Core for block acceptance.  This package provides the @command{btcd}
+node daemon and the @command{btcctl} RPC client.")
+      (license license:isc))))
+
+(define-public floresta
+  (package
+    (name "floresta")
+    (version "0.9.1")
+    (source
+     ;; Workspace binary (florestad), not published standalone on crates.io,
+     ;; so fetch the pinned tag from git rather than a crate-source.  Pre-1.0;
+     ;; pin the exact tag.  vinteumorg/Floresta now redirects to getfloresta.
+     (origin
+       (method git-fetch)
+       (uri (git-reference
+             (url "https://github.com/getfloresta/Floresta")
+             (commit (string-append "v" version))))
+       (file-name (git-file-name name version))
+       (sha256
+        (base32 "0ab1ppr5spcamsdj0d56sm1qn5ccjz23wd57xkhj1j3l2z8c9mz5"))))
+    (build-system cargo-build-system)
+    (arguments
+     (list
+      ;; Workspace app: install the daemon and client binaries, not the crate
+      ;; sources.  The integration tests drive a running node over the network
+      ;; and are not part of the cargo unit suite we build.
+      #:install-source? #f
+      #:tests? #f
+      ;; The workspace root has no [package], so cargo-build-system's default
+      ;; `cargo install --path .' install step fails.  Build every workspace
+      ;; binary (florestad + floresta-cli) and install them by hand.
+      #:cargo-build-flags ''("--release" "--bins")
+      #:phases
+      #~(modify-phases %standard-phases
+          (add-before 'build 'set-build-env
+            (lambda _
+              ;; aws-lc-sys (via rcgen/tokio-rustls) runs bindgen → libclang.
+              (setenv "LIBCLANG_PATH"
+                      #$(file-append clang "/lib"))
+              ;; The 'bitcoinkernel' feature (on by default, hard-enabled by
+              ;; floresta-node) pulls libbitcoinkernel-sys, which compiles
+              ;; Bitcoin Core's libbitcoinkernel with CMake; its
+              ;; find_package(Boost) needs Boost on CMAKE_PREFIX_PATH.
+              (setenv "CMAKE_PREFIX_PATH"
+                      #$boost)))
+          (replace 'install
+            (lambda _
+              (let ((bin (string-append #$output "/bin")))
+                (install-file "target/release/florestad" bin)
+                (install-file "target/release/floresta-cli" bin)))))))
+    (native-inputs (list boost clang cmake-minimal pkg-config))
+    (inputs (lookup-cargo-inputs 'floresta))
+    (home-page "https://github.com/getfloresta/Floresta")
+    (synopsis "Lightweight utreexo-based Bitcoin full node in Rust")
+    (description
+     "Floresta is a lightweight Bitcoin full node built on utreexo, a hash-based
+accumulator that lets the node validate the chain without storing the full
+UTXO set.  This package provides @command{florestad}, the node daemon with a
+built-in Electrum server and watch-only wallet, and @command{floresta-cli},
+its JSON-RPC client.")
+    ;; Dual-licensed MIT OR Apache-2.0 (LICENSE.md / README; the project ships
+    ;; both LICENSE-MIT and LICENSE-APACHE).
+    (license (list license:expat license:asl2.0))))

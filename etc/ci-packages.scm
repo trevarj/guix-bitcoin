@@ -20,13 +20,13 @@
   (list libsecp256k1 libsecp256k1-zkp))
 
 (define %node-packages
-  (list bitcoin-core bitcoin-knots))
+  (list bitcoin-core bitcoin-knots btcd floresta))
 
 (define %indexer-packages
   (list fulcrum electrs))
 
 (define %wallet-packages
-  (list electrum hwi))
+  (list electrum hwi hal bdk-cli))
 
 (define %lightning-packages
   (list core-lightning lnd))

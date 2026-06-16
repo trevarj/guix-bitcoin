@@ -12,6 +12,7 @@
   #:use-module (guix packages)
   #:use-module (guix git-download)
   #:use-module (guix gexp)
+  #:use-module (guix build-system cargo)
   #:use-module (guix build-system pyproject)
   #:use-module ((guix licenses)
                 #:prefix license:)
@@ -19,13 +20,16 @@
   #:use-module (gnu packages check)
   #:use-module (gnu packages finance)
   #:use-module (gnu packages libusb)
+  #:use-module (gnu packages pkg-config)
   #:use-module (gnu packages protobuf)
   #:use-module (gnu packages python-build)
   #:use-module (gnu packages python-crypto)
   #:use-module (gnu packages python-web)
   #:use-module (gnu packages python-xyz)
   #:use-module (gnu packages qt)
-  #:use-module (gnu packages serialization))
+  #:use-module (gnu packages serialization)
+  #:use-module (gnu packages sqlite)
+  #:use-module (bitcoin packages rust-crates))
 
 (define-public electrum
   (package
@@ -137,4 +141,63 @@ download the full block chain.")
      "HWI provides a command-line tool and Python library for interacting
 with hardware signing devices (Trezor, Ledger, BitBox, Coldcard, Jade and
 others), speaking PSBT to wallet software such as Bitcoin Core.")
+    (license license:expat)))
+
+(define-public hal
+  (package
+    (name "hal")
+    (version "0.11.0")
+    (source
+     ;; Published on crates.io as "hal"; the GitHub "latest release" API
+     ;; reports a stale v0.9.3, but v0.11.0 is the real latest tag/release.
+     (crate-source "hal" version
+                   "12z6ai2s5yb3122pi06c9fdgm0dvq9bjfww48a83midhamnd65c5"))
+    (build-system cargo-build-system)
+    (arguments
+     (list
+      ;; Application crate: install the "hal" binary, not the library source.
+      #:install-source? #f))
+    (inputs (lookup-cargo-inputs 'hal))
+    (home-page "https://github.com/stevenroose/hal")
+    (synopsis "Bitcoin command-line Swiss-army knife")
+    (description
+     "hal is a command-line tool to inspect, build and manipulate Bitcoin
+data: transactions, addresses, keys (BIP32), BIP39 mnemonics, PSBTs,
+Miniscript descriptors and Lightning invoices.  It is built on the
+rust-bitcoin and rust-miniscript crate stack.")
+    (license license:cc0)))
+
+(define-public bdk-cli
+  (package
+    (name "bdk-cli")
+    (version "3.0.0")
+    (source
+     ;; Published on crates.io as "bdk-cli"; matches the channel's
+     ;; crate-source convention.  Pins an older bdk_wallet (2.1.0) than the
+     ;; standalone rust-bdk-wallet library (3.0.0), so its dependency tree is
+     ;; vendored from its own lockfile rather than the library package.
+     (crate-source "bdk-cli" version
+                   "0pm8yqfb3yg2ba8j8kgfg54k32m255df1r54nk32nin5sp6n4kba"))
+    (build-system cargo-build-system)
+    (arguments
+     (list
+      ;; Application crate: install the "bdk-cli" binary, not the library
+      ;; source.  The crates.io tarball does not ship the integration-test
+      ;; fixtures, so build only.
+      #:tests? #f
+      #:install-source? #f))
+    ;; bdk-cli links a binary against system SQLite via bdk_wallet's
+    ;; rusqlite/libsqlite3-sys; provide the library (and pkg-config so its
+    ;; build script locates it) -- the rust-bdk-wallet library package avoids
+    ;; this only because it is built without linking an executable.
+    (native-inputs (list pkg-config))
+    (inputs (cons sqlite
+                  (lookup-cargo-inputs 'bdk-cli)))
+    (home-page "https://bitcoindevkit.org")
+    (synopsis "Command-line Bitcoin wallet built on the Bitcoin Dev Kit")
+    (description
+     "bdk-cli is a command-line wallet application and playground built on the
+Bitcoin Dev Kit (BDK).  It exposes descriptor-based wallets, address
+derivation, transaction creation and signing, and blockchain backends
+(Electrum, Esplora, compact-block filters) for experimentation and scripting.")
     (license license:expat)))
