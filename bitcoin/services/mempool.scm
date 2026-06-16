@@ -379,12 +379,26 @@ underscore are allowed.")
                                                                "proxy_set_header Upgrade $http_upgrade;"
                                                                "proxy_set_header Connection \"upgrade\";")))
                                                        (nginx-location-configuration
+                                                        ;; The mempool API and the Esplora-style REST it
+                                                        ;; exposes both live under the backend's /api/v1/
+                                                        ;; prefix.  Pass /api/v1 through unchanged...
+                                                        (uri "/api/v1")
+                                                        (body (list (string-append
+                                                                     "proxy_pass http://127.0.0.1:"
+                                                                     (number->string
+                                                                      http-port)
+                                                                     "/api/v1;"))))
+                                                       (nginx-location-configuration
+                                                        ;; ...and rewrite the bare Esplora /api/ surface
+                                                        ;; (e.g. /api/block/:hash/txs/:index, which the
+                                                        ;; block view pages through) onto /api/v1/,
+                                                        ;; mirroring mempool's own nginx-mempool.conf.
                                                         (uri "/api/")
                                                         (body (list (string-append
                                                                      "proxy_pass http://127.0.0.1:"
                                                                      (number->string
                                                                       http-port)
-                                                                     "/api/;"))))))))))
+                                                                     "/api/v1/;"))))))))))
 
 (define mempool-service-type
   (service-type (name 'mempool)
