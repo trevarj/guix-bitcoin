@@ -12,6 +12,13 @@
 # $GITHUB_OUTPUT as `updates=true|false` when running under Actions.
 set -eu
 
+# (etc ci-packages) transitively imports bitcoin/packages/wallets.scm, whose
+# sparrow-wallet needs (nonguix build-system binary); add the nonguix checkout
+# (created by ci-setup-guix.sh) to the load path when present.
+NONGUIX_DIR="${NONGUIX_DIR:-/tmp/guix-nonguix}"
+nonguix_L=""
+[ -d "$NONGUIX_DIR" ] && nonguix_L="-L $NONGUIX_DIR"
+
 # set name : ci-packages.scm variable
 SETS="light:%light-packages nodes:%node-packages wallets:%wallet-packages indexers:%indexer-packages lightning:%lightning-packages rust:%rust-packages explorers:%explorer-packages"
 
@@ -49,7 +56,7 @@ names_versions() {
 (for-each (lambda (p) (format #t "~a ~a~%" (package-name p) (package-version p)))
           $1)
 EOF
-    guix repl -L . -- "$_nv_script" 2>/dev/null
+    guix repl -L . $nonguix_L -- "$_nv_script" 2>/dev/null
     rm -f "$_nv_script"
 }
 
@@ -71,7 +78,7 @@ for entry in $SETS; do
     names=$(printf '%s\n' "$nv" | awk '{print $1}')
 
     # One refresh pass for the whole set; categorize each package below.
-    out=$(guix refresh -L . $names 2>&1 || true)
+    out=$(guix refresh -L . $nonguix_L $names 2>&1 || true)
 
     printf '## %s\n\n' "$set_name" >> /tmp/refresh-report.md
     printf '%s\n' "$nv" | while read -r name version; do

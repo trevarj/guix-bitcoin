@@ -26,7 +26,14 @@ latest_tarball_url() {
     echo "https://ci.guix.gnu.org$product"
 }
 ROOT_GUIX=/var/guix/profiles/per-user/root/current-guix
-PINNED_COMMIT=$(sed -n 's/.*(commit "\([0-9a-f]\{40\}\)").*/\1/p' etc/ci-guix-channels.scm)
+# The first pinned commit in the channels file is guix; the second is nonguix.
+PINNED_COMMIT=$(sed -n 's/.*(commit "\([0-9a-f]\{40\}\)").*/\1/p' etc/ci-guix-channels.scm | sed -n '1p')
+NONGUIX_COMMIT=$(sed -n 's/.*(commit "\([0-9a-f]\{40\}\)").*/\1/p' etc/ci-guix-channels.scm | sed -n '2p')
+# nonguix supplies (nonguix build-system binary) for sparrow-wallet.  Rather
+# than `guix pull' the channel (which would rebuild guix from source), we add a
+# pinned checkout to the load path via -L; ci-build.sh/ci-refresh-report.sh look
+# for it at this same path.  Re-cloned per job (small); not part of the cache.
+NONGUIX_DIR="${NONGUIX_DIR:-/tmp/guix-nonguix}"
 
 say() { printf '\033[1;34m[ci-setup-guix]\033[0m %s\n' "$*"; }
 
@@ -92,6 +99,28 @@ authorize_substitutes() {
     done
 }
 
+ensure_nonguix() {
+    [ -n "$NONGUIX_COMMIT" ] || { say "no nonguix commit pinned; skipping"; return; }
+    if [ ! -d "$NONGUIX_DIR/.git" ]; then
+        say "cloning nonguix"
+        rm -rf "$NONGUIX_DIR"
+        n=0
+        until git clone --quiet https://gitlab.com/nonguix/nonguix "$NONGUIX_DIR"; do
+            rm -rf "$NONGUIX_DIR"
+            n=$((n + 1))
+            [ "$n" -ge 3 ] && { say "nonguix clone failed after $n attempts"; exit 1; }
+            say "nonguix clone attempt $n failed; retrying in 15s"
+            sleep 15
+        done
+    fi
+    # Check out the pinned commit (fetch first if it isn't present yet).
+    git -C "$NONGUIX_DIR" checkout --quiet "$NONGUIX_COMMIT" 2>/dev/null || {
+        git -C "$NONGUIX_DIR" fetch --quiet origin
+        git -C "$NONGUIX_DIR" checkout --quiet "$NONGUIX_COMMIT"
+    }
+    say "nonguix ready at ${NONGUIX_COMMIT}"
+}
+
 ensure_path() {
     ln -sf "$ROOT_GUIX/bin/guix" /usr/local/bin/guix
     ln -sf "$ROOT_GUIX/bin/guix-daemon" /usr/local/bin/guix-daemon
@@ -115,7 +144,7 @@ pull_if_needed() {
     # channel's modules.  All compiled artifacts are regular
     # derivations (no cross-machine hash constraints), so an exact
     # toolchain match is not required.
-    if guix repl -L . >/dev/null 2>&1 <<'EOF'
+    if guix repl -L . -L "$NONGUIX_DIR" >/dev/null 2>&1 <<'EOF'
 (use-modules (etc ci-packages) (bitcoin packages rust-crates))
 EOF
     then
@@ -160,6 +189,7 @@ case "${1:-ensure}" in
         start_daemon
         ensure_path
         authorize_substitutes
+        ensure_nonguix
         pull_if_needed
         say "ready: $(guix describe 2>/dev/null | head -1 || echo unknown)"
         ;;
