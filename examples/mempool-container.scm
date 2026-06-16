@@ -21,14 +21,15 @@
 ;;   - add --share=$PWD/mempool-state=/var/lib to persist the chain across
 ;;     restarts; the seed one-shot is idempotent and skips a non-empty chain.
 
-(use-modules (gnu)
-             (gnu services)
-             (gnu services shepherd)
-             (bitcoin services bitcoin)
-             (bitcoin services indexers)
-             (bitcoin services mempool)
-             (bitcoin packages nodes)
-             (guix gexp))
+(define-module (examples mempool-container)
+  #:use-module (gnu)
+  #:use-module (gnu services)
+  #:use-module (gnu services shepherd)
+  #:use-module (bitcoin services bitcoin)
+  #:use-module (bitcoin services indexers)
+  #:use-module (bitcoin services mempool)
+  #:use-module (bitcoin packages nodes)
+  #:use-module (guix gexp))
 (use-service-modules base networking databases web)
 
 (define %datadir

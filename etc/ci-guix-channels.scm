@@ -6,6 +6,13 @@
 ;; The introduction is the official guix channel introduction; the 1.4.0
 ;; bootstrap guix requires it explicitly because the channel URL differs
 ;; from its built-in (pre-Codeberg) default.
+;;
+;; Wrapped in a module so a `guix ... -L .' scan can load this file without an
+;; "unbound variable: channel" error; `guix pull -C' still evaluates the
+;; trailing list of channels as before.
+(define-module (etc ci-guix-channels)
+  #:use-module (guix channels))
+
 (list (channel
        (name 'guix)
        (url "https://codeberg.org/guix/guix.git")
