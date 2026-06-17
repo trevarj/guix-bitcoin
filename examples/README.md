@@ -29,6 +29,15 @@ guix shell -L . -m examples/<file>.scm
 > `build`, `vm`, and `container` work out of the box. Edit the device names
 > before `reconfigure` on real hardware (containers ignore them).
 
+**Build times.** This channel serves no substitutes, so its own packages
+(`bitcoin-core`, `electrs`, `mempool`) always compile from source; standard
+dependencies (MariaDB, nginx, rust/node toolchains) download from
+`ci.guix.gnu.org`. The estimates below are for a **first** build on a modern
+multi-core x86_64 machine — once a package is in your store, rebuilds are
+near-instant. They are *build* times only, separate from blockchain sync. Add
+`--no-substitutes` and they jump to hours plus tens of GB (the whole dependency
+graph compiles from the bootstrap seed up).
+
 ## system-node.scm — minimal node OS
 
 Smallest `guix system` config: a single regtest `bitcoind` with ZMQ enabled.
@@ -38,6 +47,9 @@ Core Lightning, and the mempool stack.
 ```sh
 guix system build -L . examples/system-node.scm
 ```
+
+Build time: ~10–20 min first time (compiling `bitcoin-core`; base system
+substituted), near-instant once cached.
 
 ## system-explorer.scm — full node + self-hosted block explorer
 
@@ -76,6 +88,10 @@ sudo $(guix system container -L . examples/system-explorer.scm \
 Add `--share=$PWD/explorer-state=/var/lib` to persist the chain across restarts
 (the seed is idempotent and skips a non-empty chain).
 
+Build time: ~30–60 min first time — compiles `bitcoin-core`, `electrs`, and the
+`mempool` backend/frontend; standard deps substituted. Near-instant once cached.
+Independent of `%network` (sync time is not).
+
 Disk (rough): regtest/signet a few GB; testnet tens of GB; mainnet ~700GB+ (full
 blocks + txindex + electrs index + the mempool DB). Size the root device
 accordingly.
@@ -89,6 +105,10 @@ Build and enter it trusting no server for any package:
 guix shell --pure --no-substitutes -L . -m examples/shell-from-source.scm
 ```
 
+Build time: with substitutes for deps, ~20–40 min (compiling `bitcoin-core` +
+`electrs`). As shown with `--no-substitutes`, the whole graph builds from the
+bootstrap seed: **hours to a day+** and tens of GB of store on first run.
+
 See `docs/reproducibility.md` for what each trust level proves.
 
 ## verify-reproducible-build.sh — reproducibility check
@@ -100,3 +120,7 @@ Each build is a full from-source compile, so expect it to take a while.
 ./examples/verify-reproducible-build.sh            # bitcoin-core (default)
 ./examples/verify-reproducible-build.sh electrs    # any channel package
 ```
+
+Build time: builds the package twice (`--rounds=2`) then re-checks it
+(`--check`) — budget roughly 3× a single from-source compile (~45–90 min for
+`bitcoin-core`, less for `electrs`).
