@@ -36,7 +36,7 @@ which runs automatically when those files change or on demand (see
 | `explorers` | mempool-backend, mempool-frontend (+ mempool-rust-gbt build dep)        | [![explorers](https://img.shields.io/github/actions/workflow/status/trevarj/guix-bitcoin/build-set.yml?branch=master&label=explorers)](https://github.com/trevarj/guix-bitcoin/actions/workflows/build-set.yml) |
 
 VM system tests `%test-bitcoin-node` and `%test-electrs` (in
-`tests/bitcoin.scm`) pass in a marionette VM, and `examples/node-os.scm` builds
+`tests/bitcoin.scm`) pass in a marionette VM, and `examples/system-node.scm` builds
 with `guix system build`.
 
 ### Package versions
@@ -136,7 +136,7 @@ A minimal node configuration:
           %base-services)))
 ```
 
-See [`examples/node-os.scm`](examples/node-os.scm) for a complete, commented
+See [`examples/system-node.scm`](examples/system-node.scm) for a complete, commented
 example (node plus optional indexer, Lightning, and explorer services), and the
 module docstrings in `bitcoin/services/` for the available configuration fields.
 

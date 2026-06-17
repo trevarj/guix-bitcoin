@@ -57,7 +57,7 @@ guix build -L . --rounds=2 --keep-failed bitcoin-core
 guix build -L . --check --keep-failed bitcoin-core
 ```
 
-Wrapper script: [`examples/verify-bitcoin-core.sh`](../examples/verify-bitcoin-core.sh).
+Wrapper script: [`examples/verify-reproducible-build.sh`](../examples/verify-reproducible-build.sh).
 
 ## Full-source bootstrap
 
@@ -143,6 +143,6 @@ if you want those — it is not comparable to the from-source build here.
 | Build everything from source | `guix build -L . --no-substitutes bitcoin-core` |
 | Verify (self) | `guix build -L . --rounds=2 --keep-failed bitcoin-core` |
 | Attest (cross-builder) | `gh workflow run reproduce.yml -f package=bitcoin-core` |
-| Reproduce a toolset | `guix shell --pure --no-substitutes -L . -m examples/reproduce-manifest.scm` |
+| Reproduce a toolset | `guix shell --pure --no-substitutes -L . -m examples/shell-from-source.scm` |
 | Prove chain reaches seed | `guix graph -L . -t bag bitcoin-core \| grep stage0-posix` |
 | Bootstrap seed tarballs | `guix build bootstrap-tarballs` |

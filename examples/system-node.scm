@@ -1,6 +1,6 @@
 ;; Minimal Guix System running a regtest bitcoin node.
-;; Build check: guix system build -L . examples/node-os.scm
-(define-module (examples node-os)
+;; Build check: guix system build -L . examples/system-node.scm
+(define-module (examples system-node)
   #:use-module (gnu)
   #:use-module (bitcoin services bitcoin)
   #:use-module (bitcoin packages nodes))

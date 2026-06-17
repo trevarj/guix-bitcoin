@@ -1,8 +1,11 @@
 # Example ideas backlog
 
 Candidate `examples/` to add, for users and demonstration. Brainstormed
-2026-06-17; not yet prioritized. Existing examples: `node-os.scm` (regtest node
-OS), `mempool-container.scm` (self-seeding mempool stack container).
+2026-06-17; not yet prioritized. Existing examples: `system-node.scm` (minimal
+regtest node OS), `system-explorer.scm` (node + electrs + mempool.space stack,
+parameterized regtest→mainnet; run as OS or container — built from #3, absorbs
+#24's stack and #30's parameterization), `shell-from-source.scm` (from-source
+toolset manifest), `verify-reproducible-build.sh` (reproducibility check).
 
 Everything below composes only what the channel + Guix proper already provide
 (services: `bitcoin-node`, `clightning`, `lnd`, `electrs`, `fulcrum`,
@@ -18,7 +21,7 @@ demo impact (★1–5).
 |---|---------|------|--------------|----|----|
 | 1 | Pruned mainnet node + electrs | bitcoin-node, electrs | Canonical "personal node" — private wallet backend | Low | ★★★★★ |
 | 2 | Full (txindex) node + Fulcrum | bitcoin-node, fulcrum | High-performance Electrum server | Low | ★★★★ |
-| 3 | Signet node + electrs | bitcoin-node, electrs | Try the stack without mainnet sync; pair with Sparrow | Low | ★★★★ |
+| 3 | Signet node + electrs | bitcoin-node, electrs | Try the stack without mainnet sync; pair with Sparrow | Low | ★★★★ | ✅ `system-explorer.scm` (parameterized; +mempool)
 | 4 | Tor-only node | bitcoin-node, tor-service-type | Privacy-focused node (onion P2P+RPC) | Med | ★★★★★ |
 | 5 | Bitcoin Knots variant | bitcoin-knots | Core→Knots swap; datacarrier/policy config | Low | ★★★ |
 | 6 | btcd node OS | btcd | Alternative (Go) full node | Low | ★★ |
@@ -73,7 +76,7 @@ demo impact (★1–5).
 |---|---------|------|--------------|----|----|
 | 26 | Docker image of a node | bitcoin-node, `guix system docker-image` | Run the channel's node on a Docker host | Med | ★★★ |
 | 27 | `guix pack` relocatable CLI bundle | bitcoin-core/electrum, `guix pack` | Channel binaries on a non-Guix machine | Med | ★★ |
-| 28 | `guix system vm` quick-try | reuse node-os | Try a config in a VM with zero hardware | Low | ★★★ |
+| 28 | `guix system vm` quick-try | reuse system-node | Try a config in a VM with zero hardware | Low | ★★★ |
 
 ## H. Educational / parameterized
 
@@ -123,10 +126,10 @@ provide alone.
 Candidate artifacts (decide scope):
 - `docs/reproducibility.md` — the trust ladder + the three trust layers
   (package / deps / seed) mapped to commands. No blockers.
-- `examples/verify-bitcoin-core.sh` — `--rounds=2` + `--check` self-determinism
+- `examples/verify-reproducible-build.sh` — `--rounds=2` + `--check` self-determinism
   checks; `guix challenge` doesn't apply (the channel's bitcoin-core derivation
   has no public counterpart).
-- `examples/reproduce-manifest.scm` — node+indexer+wallet manifest +
+- `examples/shell-from-source.scm` — node+indexer+wallet manifest +
   `guix shell --pure -m … --no-substitutes` one-liner (overlaps item 15).
 - CI reproducibility job — a `--rounds=2`/periodic `--check` job on the `nodes`
   set, making the channel a standing single-party reproducibility attestor

@@ -33,7 +33,7 @@ service-affecting changes.
 ## Example system
 
 ```sh
-guix system build -L . examples/node-os.scm
+guix system build -L . examples/system-node.scm
 ```
 
 A buildable, commented operating system (node plus optional indexer/Lightning/

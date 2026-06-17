@@ -2,8 +2,8 @@
 # Verify the channel's bitcoin-core (or any named package) builds reproducibly.
 # Run from the channel checkout root:
 #
-#   ./examples/verify-bitcoin-core.sh            # bitcoin-core
-#   ./examples/verify-bitcoin-core.sh electrs    # any channel package
+#   ./examples/verify-reproducible-build.sh            # bitcoin-core
+#   ./examples/verify-reproducible-build.sh electrs    # any channel package
 #
 # Both checks are self-contained (no external reference).  `guix challenge'
 # against public servers isn't used: it compares whole derivations, and the

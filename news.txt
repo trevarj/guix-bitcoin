@@ -11,5 +11,5 @@ wiring the backend, MariaDB, an Electrum server and nginx together), the
 nodes, and the @code{rust-bitcoin} crate family.  New services include
 @code{electrs-service-type}, @code{fulcrum-service-type},
 @code{clightning-service-type}, @code{lnd-service-type} and
-@code{mempool-service-type}.  See @file{examples/node-os.scm} for a
+@code{mempool-service-type}.  See @file{examples/system-explorer.scm} for a
 self-hosted stack template."))))

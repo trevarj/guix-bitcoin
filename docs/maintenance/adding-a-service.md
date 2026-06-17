@@ -62,5 +62,5 @@ guix repl -L . -- /dev/stdin <<'EOF'
 (use-modules (bitcoin services <module>))
 (format #t "~a~%" <name>-service-type)
 EOF
-guix system build -L . examples/node-os.scm   # if you add it to the example
+guix system build -L . examples/system-node.scm   # if you add it to the example
 ```
