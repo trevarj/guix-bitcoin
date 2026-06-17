@@ -1,0 +1,38 @@
+# Manual reproducibility check + attestation.  Builds a channel package twice
+# (--rounds=2), fails if the two builds differ, and uploads SHA256SUMS (recursive
+# content hashes) as an artifact so independent builders can compare hashes.
+# GitHub-only (like refresh.yml); trigger from the Actions tab.  See
+# docs/reproducibility.md.
+name: reproduce
+on:
+  workflow_dispatch:
+    inputs:
+      package:
+        description: "Channel package to reproduce"
+        default: "bitcoin-core"
+
+jobs:
+  reproduce:
+    runs-on: ubuntu-latest
+    container:
+      image: debian:bookworm
+      options: --security-opt seccomp=unconfined
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/cache/restore@v4
+        with:
+          path: |
+            /gnu
+            /var/guix
+            /root/.config/guix
+            /root/.cache/guix
+          key: guix-${{ hashFiles('etc/ci-guix-channels.scm', 'etc/ci-setup-guix.sh') }}
+      - name: Reproduce and attest
+        run: |
+          ./etc/ci-setup-guix.sh ensure
+          ./etc/ci-reproduce.sh "${{ inputs.package }}"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: SHA256SUMS
+          path: SHA256SUMS
