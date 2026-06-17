@@ -105,23 +105,27 @@ Trust ladder (least → most paranoid):
 - (a) `guix build -L . bitcoin-core` — app from source, deps from ci.guix. mins.
 - (b) `guix build -L . --no-substitutes bitcoin-core` — whole dep graph above the
   seed built locally. hours.
-- (c) `guix build -L . --rounds=2 --check` + `guix challenge` — build is
-  deterministic; shared deps match public CI (lightweight guix.sigs analogue).
-- (d) `guix build bootstrap-tarballs` / mesboot chain then (b) — trust = 357-byte
-  seed + guile-bootstrap. hours–day+, x86 only. Document-only.
+- (c) `guix build -L . --rounds=2 --check` — build is deterministic;
+  `guix challenge` additionally checks shared deps against public CI.
+- (d) `guix build -L . --no-substitutes bitcoin-core` already builds the mesboot
+  chain from the 357-byte hex0 source (the graph roots there); only
+  guile-bootstrap stays a binary. hours–day+, x86 only.
 
 Caveats: "no substitutes" only stops *us* serving binaries — deps still come
-from ci.guix unless the user adds `--no-substitutes`; the seed is always
-downloaded unless explicitly rebuilt. `guix challenge` is weak for the pinned
-`bitcoin-core@31.0` (Guix proper is 30.0; no CI counterpart) — most useful on
-the shared dependency graph. True multi-party attestation needs >1 builder —
-the one thing a single channel can't provide alone.
+from ci.guix unless the user adds `--no-substitutes`, which then builds the whole
+chain (incl. the mesboot toolchain from the hex0 source). `guix challenge`
+compares whole derivations, and the channel keeps its own bitcoin-core definition
+(both channel and upstream Guix are 31.0, but the derivations differ), so a
+public CI counterpart isn't guaranteed — most useful on shared deps. True
+multi-party attestation needs >1 builder — the one thing a single channel can't
+provide alone.
 
 Candidate artifacts (decide scope):
 - `docs/reproducibility.md` — the trust ladder + the three trust layers
   (package / deps / seed) mapped to commands. No blockers.
-- `examples/verify-bitcoin-core.sh` — `--rounds=2 --keep-failed` + a
-  `guix challenge … --diff=diffoscope` pass (with the 31.0 caveat baked in).
+- `examples/verify-bitcoin-core.sh` — `--rounds=2` + `--check` self-determinism
+  checks; `guix challenge` doesn't apply (the channel's bitcoin-core derivation
+  has no public counterpart).
 - `examples/reproduce-manifest.scm` — node+indexer+wallet manifest +
   `guix shell --pure -m … --no-substitutes` one-liner (overlaps item 15).
 - CI reproducibility job — a `--rounds=2`/periodic `--check` job on the `nodes`
