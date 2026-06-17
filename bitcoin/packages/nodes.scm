@@ -33,6 +33,12 @@
   #:use-module (bitcoin build go-vendor)
   #:use-module (bitcoin packages rust-crates))
 
+;; Built headless: GUI off and no Qt, unlike upstream Guix's bitcoin-core
+;; (qt-build-system, -DBUILD_GUI=ON).  A node channel wants the daemon, not the
+;; desktop client; dropping Qt shrinks the closure and removes a reproducibility
+;; variable.  Same upstream source -- so the differing recipe, not the version
+;; (both are 31.0), is why this derivation has no ci.guix counterpart.  See
+;; docs/reproducibility.md.
 (define-public bitcoin-core
   (package
     (name "bitcoin-core")

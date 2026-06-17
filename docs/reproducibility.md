@@ -12,6 +12,16 @@ Guix to produce reproducible binaries that multiple builders attest to, pinning
 a Guix revision and trusting Guix's toolchain. Here you are your own builder: you
 compile from source locally and verify the build is bit-for-bit reproducible.
 
+## Vs. upstream Guix's package
+
+Guix proper also ships `bitcoin-core` at 31.0, but builds the Qt **desktop
+client** (`qt-build-system`, `-DBUILD_GUI=ON`, qtbase/qttools/qrencode). This
+channel builds it **headless** (`cmake-build-system`, `-DBUILD_GUI=OFF`, no Qt,
+benchmarks off) — the daemon a node operator wants, with a smaller closure. Same
+upstream source, different recipe, so the two derivations differ (the version is
+identical); the channel's build has no `ci.guix` counterpart, which is why
+`--rounds`/`--check` (not `guix challenge`) verify it.
+
 ## What "no substitutes" covers
 
 | Layer | Built locally from source? |
