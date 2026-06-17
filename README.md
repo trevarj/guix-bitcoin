@@ -29,7 +29,7 @@ which runs automatically when those files change or on demand (see
 |-------------|--------------------------------------------------------------------------|:--:|
 | `light`     | libsecp256k1, libsecp256k1-zkp                                            | [![light](https://img.shields.io/github/actions/workflow/status/trevarj/guix-bitcoin/check.yml?branch=master&label=light)](https://github.com/trevarj/guix-bitcoin/actions/workflows/check.yml) |
 | `nodes`     | bitcoin-core, bitcoin-knots, btcd, floresta                              | [![nodes](https://img.shields.io/github/actions/workflow/status/trevarj/guix-bitcoin/build-set.yml?branch=master&label=nodes)](https://github.com/trevarj/guix-bitcoin/actions/workflows/build-set.yml) |
-| `wallets`   | electrum, hwi, hal, bdk-cli, sparrow-wallet †                            | [![wallets](https://img.shields.io/github/actions/workflow/status/trevarj/guix-bitcoin/build-set.yml?branch=master&label=wallets)](https://github.com/trevarj/guix-bitcoin/actions/workflows/build-set.yml) |
+| `wallets`   | electrum, hwi, hal, bdk-cli                                              | [![wallets](https://img.shields.io/github/actions/workflow/status/trevarj/guix-bitcoin/build-set.yml?branch=master&label=wallets)](https://github.com/trevarj/guix-bitcoin/actions/workflows/build-set.yml) |
 | `indexers`  | fulcrum, electrs                                                         | [![indexers](https://img.shields.io/github/actions/workflow/status/trevarj/guix-bitcoin/build-set.yml?branch=master&label=indexers)](https://github.com/trevarj/guix-bitcoin/actions/workflows/build-set.yml) |
 | `lightning` | core-lightning, lnd                                                     | [![lightning](https://img.shields.io/github/actions/workflow/status/trevarj/guix-bitcoin/build-set.yml?branch=master&label=lightning)](https://github.com/trevarj/guix-bitcoin/actions/workflows/build-set.yml) |
 | `rust`      | rust-bitcoin, rust-bitcoin-hashes, rust-secp256k1, rust-miniscript, rust-bdk-wallet | [![rust](https://img.shields.io/github/actions/workflow/status/trevarj/guix-bitcoin/build-set.yml?branch=master&label=rust)](https://github.com/trevarj/guix-bitcoin/actions/workflows/build-set.yml) |
@@ -69,7 +69,10 @@ with `guix system build`.
 † `sparrow-wallet` repackages upstream's official, reproducible release image
 rather than building from source (a from-source build needs JavaFX 26, which
 Guix lacks). It is the channel's only binary package, and the reason the channel
-depends on `nonguix` — pulled automatically as a channel dependency.
+depends on `nonguix` — pulled automatically as a channel dependency. Because it
+is a binary repackage, the per-push CI does not build it (build it on demand
+with `etc/ci-build.sh binary` under a pulled guix); its upstream releases are
+still tracked by the monthly refresh job.
 
 ## Installation
 

@@ -14,6 +14,7 @@
                             %lightning-packages
                             %rust-packages
                             %explorer-packages
+                            %binary-packages
                             %all-packages))
 
 (define %light-packages
@@ -26,7 +27,16 @@
   (list fulcrum electrs))
 
 (define %wallet-packages
-  (list electrum hwi hal bdk-cli sparrow-wallet))
+  (list electrum hwi hal bdk-cli))
+
+;; Repackaged upstream release binaries (nonguix binary-build-system).  Kept
+;; out of %all-packages — and thus the auto-built sets and lint — because
+;; lowering them loads nonguix's build-side modules, which must match the guix
+;; in use; CI runs a pinned binary-tarball guix that need not match (it would
+;; require a full `guix pull').  Tracked for new releases (ci-refresh-report.sh)
+;; and buildable on demand with a pulled guix: `etc/ci-build.sh binary'.
+(define %binary-packages
+  (list sparrow-wallet))
 
 (define %lightning-packages
   (list core-lightning lnd))

@@ -22,6 +22,9 @@ case "$set_name" in
   lightning) var=%lightning-packages ;;
   rust)  var=%rust-packages ;;
   explorers) var=%explorer-packages ;;
+  # Repackaged binaries (sparrow-wallet); needs a guix matching the nonguix
+  # build-side modules, so run with a pulled guix, not the CI binary tarball.
+  binary) var=%binary-packages ;;
   all)   var=%all-packages ;;
   lint)
     # Script mode (guix repl -- FILE) prints no banner, unlike a heredoc
@@ -34,6 +37,6 @@ EOF
     names=$(guix repl -L . $nonguix_L -- "$script")
     rm -f "$script"
     exec guix lint -L . $nonguix_L $names ;;
-  *) echo "unknown set: $set_name (want light|nodes|indexers|wallets|lightning|rust|explorers|all|lint)" >&2; exit 1 ;;
+  *) echo "unknown set: $set_name (want light|nodes|indexers|wallets|lightning|rust|explorers|binary|all|lint)" >&2; exit 1 ;;
 esac
 exec guix build -L . $nonguix_L -e "(@ (etc ci-packages) $var)"
