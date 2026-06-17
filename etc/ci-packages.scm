@@ -26,7 +26,7 @@
   (list fulcrum electrs))
 
 (define %wallet-packages
-  (list electrum hwi hal bdk-cli))
+  (list electrum hwi hal bdk-cli sparrow-wallet))
 
 (define %lightning-packages
   (list core-lightning lnd))

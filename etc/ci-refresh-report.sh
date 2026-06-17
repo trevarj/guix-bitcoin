@@ -30,6 +30,7 @@ release_repo() {
         bitcoin-knots) echo "bitcoinknots/bitcoin" ;;
         mempool-backend|mempool-frontend|mempool-rust-gbt)
                        echo "mempool/mempool" ;;
+        sparrow-wallet) echo "sparrowwallet/sparrow" ;;
         *)             echo "" ;;
     esac
 }
