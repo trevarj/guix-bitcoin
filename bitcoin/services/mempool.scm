@@ -19,10 +19,14 @@
   #:use-module (gnu packages databases)
   #:use-module (bitcoin packages explorers)
   #:use-module (guix gexp)
+  #:use-module (guix least-authority)
   #:use-module (guix packages)
   #:use-module (guix records)
+  #:autoload   (gnu build linux-container) (%namespaces)
+  #:autoload   (gnu system file-systems) (file-system-mapping)
   #:use-module (ice-9 match)
   #:use-module (srfi srfi-13)
+  #:use-module (json)
   #:export (mempool-configuration mempool-configuration? mempool-service-type))
 
 (define-configuration/no-serialization mempool-configuration
@@ -97,61 +101,47 @@ underscore are allowed.")
              db-user
              db-password
              http-port)
+    ;; Build the config as a Scheme alist and render it with guile-json's
+    ;; writer, mirroring (gnu services opensnitch)'s
+    ;; opensnitch-configuration->json (the upstream idiom for nested-JSON
+    ;; service config -- define-configuration serializers target flat,
+    ;; line-oriented configs, not nested objects).  scm->json-string with
+    ;; #:pretty #t emits 2-space indentation, ": " separators, "true" for #t
+    ;; and preserves alist insertion order, so the output is byte-identical to
+    ;; the previous hand-built string (verified against the render goldens).
     (plain-file "mempool-config.json"
-                (string-append "{\n"
-                               "  \"MEMPOOL\": {\n"
-                               "    \"NETWORK\": \""
-                               (symbol->string network)
-                               "\",\n"
-                               "    \"BACKEND\": \"electrum\",\n"
-                               "    \"HTTP_PORT\": "
-                               (number->string http-port)
-                               ",\n"
-                               "    \"CACHE_DIR\": \"/var/lib/mempool/cache\"
-"
-                               "  },\n"
-                               "  \"CORE_RPC\": {\n"
-                               "    \"HOST\": \""
-                               bitcoind-rpc-host
-                               "\",\n"
-                               "    \"PORT\": "
-                               (number->string bitcoind-rpc-port)
-                               ",\n"
-                               "    \"COOKIE\": true,\n"
-                               "    \"COOKIE_PATH\": \""
-                               bitcoind-cookie
-                               "\"\n"
-                               "  },\n"
-                               "  \"ELECTRUM\": {\n"
-                               "    \"HOST\": \""
-                               electrum-host
-                               "\",\n"
-                               "    \"PORT\": "
-                               (number->string electrum-port)
-                               ",\n"
-                               "    \"TLS_ENABLED\": false\n"
-                               "  },\n"
-                               "  \"DATABASE\": {\n"
-                               "    \"ENABLED\": true,\n"
-                               ;; The backend writes a PID lock file; default is
-                               ;; __dirname (its code dir), which is the
-                               ;; read-only store -> EROFS crash.  Point it at the
-                               ;; writable, mempool-owned state dir.
-                               "    \"PID_DIR\": \"/var/lib/mempool\",\n"
-                               "    \"HOST\": \"localhost\",\n"
-                               "    \"SOCKET\": \"/run/mysqld/mysqld.sock\",
-"
-                               "    \"DATABASE\": \""
-                               db-name
-                               "\",\n"
-                               "    \"USERNAME\": \""
-                               db-user
-                               "\",\n"
-                               "    \"PASSWORD\": \""
-                               db-password
-                               "\"\n"
-                               "  }\n"
-                               "}\n"))))
+                (string-append
+                 (scm->json-string
+                  `((MEMPOOL
+                     . ((NETWORK . ,(symbol->string network))
+                        (BACKEND . "electrum")
+                        (HTTP_PORT . ,http-port)
+                        (CACHE_DIR . "/var/lib/mempool/cache")))
+                    (CORE_RPC
+                     . ((HOST . ,bitcoind-rpc-host)
+                        (PORT . ,bitcoind-rpc-port)
+                        (COOKIE . #t)
+                        (COOKIE_PATH . ,bitcoind-cookie)))
+                    (ELECTRUM
+                     . ((HOST . ,electrum-host)
+                        (PORT . ,electrum-port)
+                        (TLS_ENABLED . #f)))
+                    (DATABASE
+                     . ((ENABLED . #t)
+                        ;; The backend writes a PID lock file; default is
+                        ;; __dirname (its code dir), which is the read-only
+                        ;; store -> EROFS crash.  Point it at the writable,
+                        ;; mempool-owned state dir.
+                        (PID_DIR . "/var/lib/mempool")
+                        (HOST . "localhost")
+                        (SOCKET . "/run/mysqld/mysqld.sock")
+                        (DATABASE . ,db-name)
+                        (USERNAME . ,db-user)
+                        (PASSWORD . ,db-password))))
+                  #:pretty #t)
+                 ;; scm->json-string emits no trailing newline; keep the
+                 ;; original file's terminating newline.
+                 "\n"))))
 
 ;; db-name and db-user are interpolated verbatim into the one-shot setup
 ;; SQL below, so restrict them to a safe identifier charset.  Checked at
@@ -287,8 +277,70 @@ underscore are allowed.")
 
 (define (mempool-shepherd-service config)
   (match-record config <mempool-configuration>
-    (electrum-provision)
-    (let ((conf (mempool-backend-config-file config)))
+    (electrum-provision bitcoind-cookie)
+    (let* ((conf (mempool-backend-config-file config))
+          ;; Wrap the readiness-gating launcher (which execl's the real
+          ;; backend) in a least-authority container.  Mirrors electrs in
+          ;; (bitcoin services indexers) and tor/ipfs upstream: the wrapped
+          ;; executable is run by make-forkexec-constructor, with
+          ;; #:user/#:group/#:log-file staying on the constructor.
+          ;;
+          ;; Map PARENT directories, never the leaf socket/cookie: the
+          ;; wrapper statfs/bind-mounts every #:mappings source at
+          ;; container-setup time, before the gating program runs.  The
+          ;; mysqld socket and the bitcoind cookie may not exist yet at
+          ;; boot (that is exactly what the gate waits for); mapping them
+          ;; directly would abort the wrapper.  Mounting their parent dirs
+          ;; lets those files appear inside the container at runtime.
+          (wrapper
+           (least-authority-wrapper
+            (mempool-backend-program config)
+            #:name "mempool-backend"
+            #:mappings
+            (list
+             ;; State dir: PID lock file + cache (nested writable subdir
+             ;; is covered by the writable parent, matching how tor maps
+             ;; /var/lib/tor as one writable mount).
+             (file-system-mapping
+              (source "/var/lib/mempool")
+              (target source)
+              (writable? #t))
+             ;; MariaDB runtime dir: the mysqld.sock the backend dials
+             ;; appears here at runtime.
+             (file-system-mapping
+              (source "/run/mysqld")
+              (target source)
+              (writable? #t))
+             ;; bitcoind data dir holds the RPC cookie (per-network
+             ;; subdirs included); read-only.  Map the dir, not the leaf
+             ;; cookie, which is created after bitcoind starts.
+             (file-system-mapping
+              (source (dirname bitcoind-cookie))
+              (target source))
+             ;; The backend's JSON config store path, passed via
+             ;; MEMPOOL_CONFIG_FILE below.  least-authority maps only the
+             ;; wrapped program's closure, not env-referenced store files, so
+             ;; map it explicitly (read-only) -- as tor maps its torrc.
+             (file-system-mapping
+              (source conf)
+              (target source)))
+            ;; Keep the 'user' namespace and drop only 'net (the backend
+            ;; dials the Electrum host/port, bitcoind RPC and the local
+            ;; mysqld socket).  This is the dominant upstream idiom for a
+            ;; least-authority program launched via make-forkexec-constructor
+            ;; with #:user set -- tor, ipfs (gnu/services/networking.scm) and
+            ;; electrs (this repo's indexers.scm) all use
+            ;; (delq 'net %namespaces).  The forkexec constructor performs the
+            ;; setuid to mempool:bitcoin itself; an unprivileged process can
+            ;; still create the user namespace, so dropping 'user (as
+            ;; lightning.scm does) is unnecessary and the minority pattern.
+            #:namespaces (delq 'net %namespaces)
+            ;; The wrapper erases the environment except the preserved set,
+            ;; which omits MEMPOOL_CONFIG_FILE; add it so the backend keeps
+            ;; its config path (set by make-forkexec-constructor below).
+            #:preserved-environment-variables
+            (cons "MEMPOOL_CONFIG_FILE"
+                  %default-preserved-environment-variables))))
       (list (mempool-db-setup-service config)
             (shepherd-service (provision '(mempool-backend))
                               (requirement `(bitcoind bitcoind-cookie-access
@@ -314,8 +366,7 @@ underscore are allowed.")
                               ;; number lowers cleanly.)
                               (respawn? #t)
                               (respawn-delay 30)
-                              (start #~(make-forkexec-constructor (list #$(mempool-backend-program
-                                                                           config))
+                              (start #~(make-forkexec-constructor (list #$wrapper)
                                         #:user "mempool"
                                         #:group "bitcoin"
                                         #:environment-variables (list (string-append
