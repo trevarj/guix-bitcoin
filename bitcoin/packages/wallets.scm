@@ -331,10 +331,9 @@ Icon=sparrow
 Terminal=false
 Categories=Office;Finance;
 MimeType=x-scheme-handler/bitcoin;
-StartupWMClass=Sparrow~%")))))))
-          ;; The embedded Tor binary lives inside the jlink image and cannot
-          ;; be patched; configure Sparrow to use a system Tor proxy instead.
-          )))
+StartupWMClass=Sparrow~%"))))))))))
+    ;; NOTE: The embedded Tor binary lives inside the jlink image and cannot be
+    ;; patched; configure Sparrow to use a system Tor proxy instead.
     (inputs
      (list bash-minimal
            glibc

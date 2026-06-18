@@ -111,7 +111,7 @@
                            (string-append dir "/index.d.ts"))))))))
     (inputs (lookup-cargo-inputs 'mempool-rust-gbt))
     (home-page "https://mempool.space/")
-    (synopsis "getBlockTemplate algorithm reimplementation for mempool")
+    (synopsis "Rust getBlockTemplate implementation for mempool")
     (description
      "@code{rust-gbt} is the mempool backend's napi-rs native addon: an
 efficient Rust reimplementation of Bitcoin's getBlockTemplate algorithm,
