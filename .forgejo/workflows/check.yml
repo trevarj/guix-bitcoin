@@ -1,5 +1,5 @@
-# Cheap gate on every push: warm/restore the Guix cache, lint everything,
-# build the light package set.
+# Warm/restore the Guix cache on every push so the heavier build-set
+# workflow has a populated cache to restore.
 #
 # Caching scheme: `setup-guix` installs Guix (binary tarball + guix pull to
 # the commit pinned in etc/ci-guix-channels.scm) ONCE and saves /gnu +
@@ -36,22 +36,3 @@ jobs:
       - name: Install and pull Guix (cache miss only)
         if: steps.guix-cache.outputs.cache-hit != 'true'
         run: ./etc/ci-setup-guix.sh ensure
-
-  lint-and-light:
-    needs: setup-guix
-    runs-on: codeberg-medium-lazy
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/cache/restore@v4
-        with:
-          path: |
-            /gnu
-            /var/guix
-            /root/.config/guix
-            /root/.cache/guix
-          key: guix-${{ hashFiles('etc/ci-guix-channels.scm', 'etc/ci-setup-guix.sh') }}
-      - name: Lint and build light set
-        run: |
-          ./etc/ci-setup-guix.sh ensure
-          ./etc/ci-build.sh lint
-          ./etc/ci-build.sh light

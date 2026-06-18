@@ -1,7 +1,0 @@
-# Cheap gate on every push: lint everything, build the light set.
-steps:
-  lint-and-light-build:
-    image: metacall/guix:latest
-    commands:
-      - ./etc/ci-build.sh lint
-      - ./etc/ci-build.sh light

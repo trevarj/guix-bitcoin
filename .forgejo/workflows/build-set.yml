@@ -2,7 +2,7 @@
 # ci-build.sh set names (etc/ci-changed-sets.sh) and 'build' fans out over
 # exactly those sets -- touching bitcoin/packages/explorers.scm builds the
 # explorers set, not everything.  Or dispatch one set manually:
-#   fj actions dispatch build-set.yml -f package_set=<light|nodes|indexers|wallets|lightning|rust|explorers|all>
+#   fj actions dispatch build-set.yml -f package_set=<libs|nodes|indexers|wallets|lightning|rust|explorers|all>
 # Restores the Guix cache produced by check.yml's setup-guix job.
 name: build-set
 on:
@@ -49,7 +49,7 @@ jobs:
           # matrix runs them in parallel (one sequential "all" job would
           # exceed the per-job timeout).
           case " $names " in
-            *" all "*) names="light nodes wallets indexers lightning rust explorers" ;;
+            *" all "*) names="libs nodes wallets indexers lightning rust explorers" ;;
           esac
           echo "selected sets: ${names:-(none)}"
           sets=$(printf '%s\n' $names | jq -R . | jq -sc 'map(select(length > 0))')

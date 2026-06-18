@@ -1,5 +1,5 @@
 # Heavy node builds: run when the nodes module changes, or trigger
-# manually (optionally with PACKAGE_SET=light|nodes|all).
+# manually (optionally with PACKAGE_SET=libs|nodes|all).
 when:
   - event: [push]
     path:
