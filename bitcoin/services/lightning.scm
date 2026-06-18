@@ -19,30 +19,36 @@
   #:use-module (guix packages)
   #:use-module (guix records)
   #:use-module (ice-9 match)
-  #:export (clightning-configuration clightning-configuration?
-                                     clightning-service-type lnd-configuration
-                                     lnd-configuration? lnd-service-type))
+  #:export (clightning-configuration
+            clightning-configuration?
+            clightning-service-type
+            lnd-configuration
+            lnd-configuration?
+            lnd-service-type))
 
 ;;; core-lightning
 
 (define-configuration/no-serialization clightning-configuration
-                                       (package
-                                         (file-like core-lightning)
-                                         "The core-lightning package to run.")
-                                       (network (symbol 'bitcoin)
-                                        "Network: @code{'bitcoin} (mainnet), @code{'testnet}, @code{'signet},
+  (package
+   (file-like core-lightning)
+   "The core-lightning package to run.")
+  (network
+   (symbol 'bitcoin)
+   "Network: @code{'bitcoin} (mainnet), @code{'testnet}, @code{'signet},
 @code{'regtest}.  (CLN calls mainnet @code{bitcoin}.)")
-                                       (data-directory (string
-                                                        "/var/lib/clightning")
-                                        "Lightning state directory (contains the wallet seed — backed up by the
+  (data-directory
+   (string "/var/lib/clightning")
+   "Lightning state directory (contains the wallet seed — backed up by the
 operator, never touched by this service).")
-                                       (bitcoin-datadir (string
-                                                         "/var/lib/bitcoind")
-                                        "bitcoind data directory, for cookie RPC authentication.")
-                                       (alias (string "")
-                                              "Optional public node alias.")
-                                       (extra-config (list-of-strings '())
-                                        "Raw lines appended to the generated CLN config file."))
+  (bitcoin-datadir
+   (string "/var/lib/bitcoind")
+   "bitcoind data directory, for cookie RPC authentication.")
+  (alias
+   (string "")
+   "Optional public node alias.")
+  (extra-config
+   (list-of-strings '())
+   "Raw lines appended to the generated CLN config file."))
 
 (define (clightning-config-file config)
   (match-record config <clightning-configuration>
@@ -65,24 +71,20 @@ operator, never touched by this service).")
 
 (define (clightning-shepherd-service config)
   (match-record config <clightning-configuration>
-    (package
-      )
+    (package)
     (let ((conf (clightning-config-file config)))
-      (list (shepherd-service (provision '(clightning lightningd))
-                              (requirement '(bitcoind bitcoind-cookie-access user-processes
-                                                      networking))
-                              (documentation "Run the Core Lightning daemon.")
-                              (start #~(make-forkexec-constructor (list #$(file-append
-                                                                           package
-                                                                           "/bin/lightningd")
-                                                                        (string-append
-                                                                         "--conf="
-                                                                         #$conf))
-                                        #:user "clightning"
-                                        #:group "bitcoin"
-                                        #:log-file "/var/log/clightning.log"))
-                              (stop #~(make-kill-destructor SIGTERM
-                                                            #:grace-period 60)))))))
+      (list (shepherd-service
+             (provision '(clightning lightningd))
+             (requirement '(bitcoind bitcoind-cookie-access
+                                     user-processes networking))
+             (documentation "Run the Core Lightning daemon.")
+             (start #~(make-forkexec-constructor
+                       (list #$(file-append package "/bin/lightningd")
+                             (string-append "--conf=" #$conf))
+                       #:user "clightning"
+                       #:group "bitcoin"
+                       #:log-file "/var/log/clightning.log"))
+             (stop #~(make-kill-destructor SIGTERM #:grace-period 60)))))))
 
 (define (clightning-account config)
   (list (user-account
@@ -125,31 +127,35 @@ group to read the node's RPC cookie.")))
 ;;; lnd
 
 (define-configuration/no-serialization lnd-configuration
-                                       (package
-                                         (file-like lnd)
-                                         "The lnd package to run.")
-                                       (network (symbol 'mainnet)
-                                        "Chain: @code{'mainnet}, @code{'testnet}, @code{'signet},
+  (package
+   (file-like lnd)
+   "The lnd package to run.")
+  (network
+   (symbol 'mainnet)
+   "Chain: @code{'mainnet}, @code{'testnet}, @code{'signet},
 @code{'regtest}.")
-                                       (data-directory (string "/var/lib/lnd")
-                                        "lnd state directory (wallet, macaroons; operator-managed secrets).")
-                                       (bitcoind-rpc-host (string
-                                                           "127.0.0.1:8332")
-                                        "host:port of bitcoind RPC.")
-                                       (bitcoind-rpc-cookie (string
-                                                             "/var/lib/bitcoind/.cookie")
-                                        "Path to bitcoind's cookie file (per-network subdirectory on
+  (data-directory
+   (string "/var/lib/lnd")
+   "lnd state directory (wallet, macaroons; operator-managed secrets).")
+  (bitcoind-rpc-host
+   (string "127.0.0.1:8332")
+   "host:port of bitcoind RPC.")
+  (bitcoind-rpc-cookie
+   (string "/var/lib/bitcoind/.cookie")
+   "Path to bitcoind's cookie file (per-network subdirectory on
 non-mainnet networks).")
-                                       (zmq-pub-raw-block (string
-                                                           "tcp://127.0.0.1:28332")
-                                        "bitcoind's zmqpubrawblock endpoint (must be enabled on the node).")
-                                       (zmq-pub-raw-tx (string
-                                                        "tcp://127.0.0.1:28333")
-                                        "bitcoind's zmqpubrawtx endpoint (must be enabled on the node).")
-                                       (alias (string "")
-                                              "Optional public node alias.")
-                                       (extra-config (list-of-strings '())
-                                        "Raw lines appended to the generated @file{lnd.conf}."))
+  (zmq-pub-raw-block
+   (string "tcp://127.0.0.1:28332")
+   "bitcoind's zmqpubrawblock endpoint (must be enabled on the node).")
+  (zmq-pub-raw-tx
+   (string "tcp://127.0.0.1:28333")
+   "bitcoind's zmqpubrawtx endpoint (must be enabled on the node).")
+  (alias
+   (string "")
+   "Optional public node alias.")
+  (extra-config
+   (list-of-strings '())
+   "Raw lines appended to the generated @file{lnd.conf}."))
 
 (define (lnd-network-option network)
   (match network
@@ -196,24 +202,20 @@ non-mainnet networks).")
 
 (define (lnd-shepherd-service config)
   (match-record config <lnd-configuration>
-    (package
-      )
+    (package)
     (let ((conf (lnd-config-file config)))
-      (list (shepherd-service (provision '(lnd))
-                              (requirement '(bitcoind bitcoind-cookie-access user-processes
-                                                      networking))
-                              (documentation "Run the lnd Lightning daemon.")
-                              (start #~(make-forkexec-constructor (list #$(file-append
-                                                                           package
-                                                                           "/bin/lnd")
-                                                                        (string-append
-                                                                         "--configfile="
-                                                                         #$conf))
-                                        #:user "lnd"
-                                        #:group "bitcoin"
-                                        #:log-file "/var/log/lnd.log"))
-                              (stop #~(make-kill-destructor SIGTERM
-                                                            #:grace-period 60)))))))
+      (list (shepherd-service
+             (provision '(lnd))
+             (requirement '(bitcoind bitcoind-cookie-access
+                                     user-processes networking))
+             (documentation "Run the lnd Lightning daemon.")
+             (start #~(make-forkexec-constructor
+                       (list #$(file-append package "/bin/lnd")
+                             (string-append "--configfile=" #$conf))
+                       #:user "lnd"
+                       #:group "bitcoin"
+                       #:log-file "/var/log/lnd.log"))
+             (stop #~(make-kill-destructor SIGTERM #:grace-period 60)))))))
 
 (define (lnd-account config)
   (list (user-account

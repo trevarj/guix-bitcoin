@@ -19,36 +19,41 @@
   #:use-module (guix packages)
   #:use-module (guix records)
   #:use-module (ice-9 match)
-  #:export (electrs-configuration electrs-configuration? electrs-service-type
-                                  fulcrum-configuration fulcrum-configuration?
-                                  fulcrum-service-type))
+  #:export (electrs-configuration
+            electrs-configuration?
+            electrs-service-type
+            fulcrum-configuration
+            fulcrum-configuration?
+            fulcrum-service-type))
 
 ;;; electrs
 
 (define-configuration/no-serialization electrs-configuration
-                                       (package
-                                         (file-like electrs)
-                                         "The electrs package to run.")
-                                       (network (symbol 'mainnet)
-                                        "Chain: @code{'mainnet}, @code{'testnet}, @code{'signet}, @code{'regtest}.
+  (package
+   (file-like electrs)
+   "The electrs package to run.")
+  (network
+   (symbol 'mainnet)
+   "Chain: @code{'mainnet}, @code{'testnet}, @code{'signet}, @code{'regtest}.
 Must match the bitcoin node's network.")
-                                       (db-directory (string
-                                                      "/var/lib/electrs")
-                                        "Directory for the index database.")
-                                       (daemon-data-directory (string
-                                                               "/var/lib/bitcoind")
-                                        "The bitcoin node's data directory (for the RPC cookie file).")
-                                       (daemon-rpc-address (string
-                                                            "127.0.0.1:8332")
-                                        "host:port of bitcoind's RPC interface.")
-                                       (daemon-p2p-address (string
-                                                            "127.0.0.1:8333")
-                                        "host:port of bitcoind's P2P interface.")
-                                       (electrum-rpc-address (string
-                                                              "127.0.0.1:50001")
-                                        "host:port for serving the Electrum protocol.")
-                                       (extra-options (list-of-strings '())
-                                        "Raw additional command-line options passed to electrs."))
+  (db-directory
+   (string "/var/lib/electrs")
+   "Directory for the index database.")
+  (daemon-data-directory
+   (string "/var/lib/bitcoind")
+   "The bitcoin node's data directory (for the RPC cookie file).")
+  (daemon-rpc-address
+   (string "127.0.0.1:8332")
+   "host:port of bitcoind's RPC interface.")
+  (daemon-p2p-address
+   (string "127.0.0.1:8333")
+   "host:port of bitcoind's P2P interface.")
+  (electrum-rpc-address
+   (string "127.0.0.1:50001")
+   "host:port for serving the Electrum protocol.")
+  (extra-options
+   (list-of-strings '())
+   "Raw additional command-line options passed to electrs."))
 
 (define (electrs-network-option network)
   (match network
@@ -67,45 +72,29 @@ Must match the bitcoin node's network.")
       daemon-p2p-address
       electrum-rpc-address
       extra-options)
-    (list (shepherd-service (provision '(electrs))
-                            (requirement '(bitcoind bitcoind-cookie-access user-processes networking))
-                            (documentation "Run the electrs Electrum server.")
-                            (start #~(make-forkexec-constructor (append (list #$
-                                                                              (file-append
-                                                                               package
-                                                                               "/bin/electrs")
-                                                                              
-                                                                              (string-append
-                                                                               "--network="
-                                                                               #$
-                                                                               (electrs-network-option
-                                                                                network))
-                                                                              
-                                                                              (string-append
-                                                                               "--db-dir="
-                                                                               #$db-directory)
-                                                                              
-                                                                              (string-append
-                                                                               "--daemon-dir="
-                                                                               #$daemon-data-directory)
-                                                                              
-                                                                              (string-append
-                                                                               "--daemon-rpc-addr="
-                                                                               #$daemon-rpc-address)
-                                                                              
-                                                                              (string-append
-                                                                               "--daemon-p2p-addr="
-                                                                               #$daemon-p2p-address)
-                                                                              
-                                                                              (string-append
-                                                                               "--electrum-rpc-addr="
-                                                                               #$electrum-rpc-address))
-                                                                        '#$extra-options)
-                                      #:user "electrs"
-                                      #:group "bitcoin"
-                                      #:log-file "/var/log/electrs.log"))
-                            (stop #~(make-kill-destructor SIGINT
-                                                          #:grace-period 60))))))
+    (list (shepherd-service
+           (provision '(electrs))
+           (requirement '(bitcoind bitcoind-cookie-access
+                                   user-processes networking))
+           (documentation "Run the electrs Electrum server.")
+           (start #~(make-forkexec-constructor
+                     (append (list #$(file-append package "/bin/electrs")
+                                   (string-append "--network="
+                                                  #$(electrs-network-option network))
+                                   (string-append "--db-dir=" #$db-directory)
+                                   (string-append "--daemon-dir="
+                                                  #$daemon-data-directory)
+                                   (string-append "--daemon-rpc-addr="
+                                                  #$daemon-rpc-address)
+                                   (string-append "--daemon-p2p-addr="
+                                                  #$daemon-p2p-address)
+                                   (string-append "--electrum-rpc-addr="
+                                                  #$electrum-rpc-address))
+                             '#$extra-options)
+                     #:user "electrs"
+                     #:group "bitcoin"
+                     #:log-file "/var/log/electrs.log"))
+           (stop #~(make-kill-destructor SIGINT #:grace-period 60))))))
 
 (define (electrs-account config)
   (list (user-account
@@ -148,22 +137,25 @@ user joins the @code{bitcoin} group to read the node's RPC cookie.")))
 ;;; fulcrum
 
 (define-configuration/no-serialization fulcrum-configuration
-                                       (package
-                                         (file-like fulcrum)
-                                         "The fulcrum package to run.")
-                                       (data-directory (string
-                                                        "/var/lib/fulcrum")
-                                        "Directory for Fulcrum's database.")
-                                       (bitcoind-rpc (string "127.0.0.1:8332")
-                                        "host:port of bitcoind's RPC interface.")
-                                       (rpc-cookie (string
-                                                    "/var/lib/bitcoind/.cookie")
-                                        "Path to bitcoind's RPC cookie file (per-network subdirectory for
+  (package
+   (file-like fulcrum)
+   "The fulcrum package to run.")
+  (data-directory
+   (string "/var/lib/fulcrum")
+   "Directory for Fulcrum's database.")
+  (bitcoind-rpc
+   (string "127.0.0.1:8332")
+   "host:port of bitcoind's RPC interface.")
+  (rpc-cookie
+   (string "/var/lib/bitcoind/.cookie")
+   "Path to bitcoind's RPC cookie file (per-network subdirectory for
 non-mainnet, e.g. @file{/var/lib/bitcoind/regtest/.cookie}).")
-                                       (tcp-address (string "127.0.0.1:50001")
-                                        "host:port for plain-TCP Electrum protocol service.")
-                                       (extra-config (list-of-strings '())
-                                        "Raw lines appended to the generated @file{fulcrum.conf}."))
+  (tcp-address
+   (string "127.0.0.1:50001")
+   "host:port for plain-TCP Electrum protocol service.")
+  (extra-config
+   (list-of-strings '())
+   "Raw lines appended to the generated @file{fulcrum.conf}."))
 
 (define (fulcrum-config-file config)
   (match-record config <fulcrum-configuration>
@@ -186,24 +178,21 @@ non-mainnet, e.g. @file{/var/lib/bitcoind/regtest/.cookie}).")
 
 (define (fulcrum-shepherd-service config)
   (match-record config <fulcrum-configuration>
-    (package
-      )
+    (package)
     (let ((conf (fulcrum-config-file config)))
-      (list (shepherd-service (provision '(fulcrum))
-                              (requirement '(bitcoind bitcoind-cookie-access user-processes
-                                                      networking))
-                              (documentation
-                               "Run the Fulcrum Electrum server.")
-                              ;; Fulcrum takes the config file as a positional argument.
-                              (start #~(make-forkexec-constructor (list #$(file-append
-                                                                           package
-                                                                           "/bin/Fulcrum")
-                                                                        #$conf)
-                                        #:user "fulcrum"
-                                        #:group "bitcoin"
-                                        #:log-file "/var/log/fulcrum.log"))
-                              (stop #~(make-kill-destructor SIGINT
-                                                            #:grace-period 60)))))))
+      (list (shepherd-service
+             (provision '(fulcrum))
+             (requirement '(bitcoind bitcoind-cookie-access
+                                     user-processes networking))
+             (documentation "Run the Fulcrum Electrum server.")
+             ;; Fulcrum takes the config file as a positional argument.
+             (start #~(make-forkexec-constructor
+                       (list #$(file-append package "/bin/Fulcrum")
+                             #$conf)
+                       #:user "fulcrum"
+                       #:group "bitcoin"
+                       #:log-file "/var/log/fulcrum.log"))
+             (stop #~(make-kill-destructor SIGINT #:grace-period 60)))))))
 
 (define (fulcrum-account config)
   (list (user-account

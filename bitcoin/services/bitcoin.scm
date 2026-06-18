@@ -19,44 +19,54 @@
   #:use-module (guix packages)
   #:use-module (guix records)
   #:use-module (ice-9 match)
-  #:export (bitcoin-node-configuration bitcoin-node-configuration?
-                                       bitcoin-node-service-type))
+  #:export (bitcoin-node-configuration
+            bitcoin-node-configuration?
+            bitcoin-node-service-type))
 
 (define-configuration/no-serialization bitcoin-node-configuration
-                                       (package
-                                         (file-like bitcoin-core)
-                                         "Node implementation to run: @code{bitcoin-core} or @code{bitcoin-knots}.")
-                                       (network (symbol 'mainnet)
-                                        "Chain to use: @code{'mainnet}, @code{'testnet}, @code{'signet} or
+  (package
+   (file-like bitcoin-core)
+   "Node implementation to run: @code{bitcoin-core} or @code{bitcoin-knots}.")
+  (network
+   (symbol 'mainnet)
+   "Chain to use: @code{'mainnet}, @code{'testnet}, @code{'signet} or
 @code{'regtest}.")
-                                       (data-directory (string
-                                                        "/var/lib/bitcoind")
-                                        "Directory holding the block chain, wallets and RPC cookie.  Pointing
+  (data-directory
+   (string "/var/lib/bitcoind")
+   "Directory holding the block chain, wallets and RPC cookie.  Pointing
 this at an existing directory does not change ownership of its contents;
 only the directory itself is created and owned at activation.")
-                                       (prune (integer 0)
-                                        "Prune target in MiB; @code{0} disables pruning, @code{1} allows manual
+  (prune
+   (integer 0)
+   "Prune target in MiB; @code{0} disables pruning, @code{1} allows manual
 pruning.")
-                                       (txindex? (boolean #f)
-                                        "Whether to maintain a full transaction index (incompatible with
+  (txindex?
+   (boolean #f)
+   "Whether to maintain a full transaction index (incompatible with
 pruning).")
-                                       (rpc-bind (string "127.0.0.1")
-                                        "Address the RPC server listens on.")
-                                       (rpc-allow-ip (list-of-strings '("127.0.0.1"))
-                                        "Client addresses/subnets allowed to use the RPC interface, one
+  (rpc-bind
+   (string "127.0.0.1")
+   "Address the RPC server listens on.")
+  (rpc-allow-ip
+   (list-of-strings '("127.0.0.1"))
+   "Client addresses/subnets allowed to use the RPC interface, one
 @code{rpcallowip} line each (e.g. @code{\"192.168.1.0/24\"}).  Distinct
 from @code{rpc-bind}, which only controls the listening address.")
-                                       (rpc-auth (string "")
-                                        "Optional @code{rpcauth} line (salted hash, as produced by upstream's
+  (rpc-auth
+   (string "")
+   "Optional @code{rpcauth} line (salted hash, as produced by upstream's
 @file{share/rpcauth/rpcauth.py}).  When empty, cookie authentication is
 used; the cookie is group-readable by the @code{bitcoin} group.")
-                                       (zmq-pub-raw-block (string "")
-                                        "Optional ZMQ endpoint for raw block notifications, e.g.
+  (zmq-pub-raw-block
+   (string "")
+   "Optional ZMQ endpoint for raw block notifications, e.g.
 @code{\"tcp://127.0.0.1:28332\"}.")
-                                       (zmq-pub-raw-tx (string "")
-                                        "Optional ZMQ endpoint for raw transaction notifications.")
-                                       (extra-config (list-of-strings '())
-                                        "Raw lines appended verbatim to @file{bitcoin.conf}.  Lines are placed
+  (zmq-pub-raw-tx
+   (string "")
+   "Optional ZMQ endpoint for raw transaction notifications.")
+  (extra-config
+   (list-of-strings '())
+   "Raw lines appended verbatim to @file{bitcoin.conf}.  Lines are placed
 in the global section of @file{bitcoin.conf} (before the per-network
 section header), so network-scoped options must include their own section
 header within these lines."))
@@ -130,43 +140,38 @@ RPC cookie)."
       data-directory)
     (let ((conf (bitcoin-node-config-file config))
           (netdir (network-data-directory config)))
-      (list (shepherd-service (provision '(bitcoind bitcoin-node))
-                              (requirement '(user-processes networking))
-                              (documentation "Run a bitcoind full node.")
-                              (start #~(make-forkexec-constructor (list #$(file-append
-                                                                           package
-                                                                           "/bin/bitcoind")
-                                                                        (string-append
-                                                                         "-conf="
-                                                                         #$conf)
-                                                                        (string-append
-                                                                         "-datadir="
-                                                                         #$data-directory))
-                                        #:user "bitcoin"
-                                        #:group "bitcoin"
-                                        #:log-file "/var/log/bitcoind.log"))
-                              ;; bitcoind flushes state on SIGTERM; give it time.
-                              (stop #~(make-kill-destructor SIGTERM
-                                                            #:grace-period 120)))
+      (list (shepherd-service
+             (provision '(bitcoind bitcoin-node))
+             (requirement '(user-processes networking))
+             (documentation "Run a bitcoind full node.")
+             (start #~(make-forkexec-constructor
+                       (list #$(file-append package "/bin/bitcoind")
+                             (string-append "-conf=" #$conf)
+                             (string-append "-datadir=" #$data-directory))
+                       #:user "bitcoin"
+                       #:group "bitcoin"
+                       #:log-file "/var/log/bitcoind.log"))
+             ;; bitcoind flushes state on SIGTERM; give it time.
+             (stop #~(make-kill-destructor SIGTERM #:grace-period 120)))
             ;; bitcoind forces umask 077, so the per-network directory it
             ;; creates is 0700 and the group-readable RPC cookie inside is
             ;; unreachable for cookie clients in the bitcoin group.  Open
             ;; the directory to the group once the cookie appears.
-            (shepherd-service (provision '(bitcoind-cookie-access))
-                              (requirement '(bitcoind))
-                              (one-shot? #t)
-                              (documentation
-                               "Make bitcoind's network directory group-traversable.")
-                              (start #~(lambda _
-                                         (let loop ((tries 120))
-                                           (cond ((file-exists?
-                                                   (string-append #$netdir
-                                                                  "/.cookie"))
-                                                  (chmod #$netdir #o750)
-                                                  #t)
-                                                 ((zero? tries) #f)
-                                                 (else (sleep 1)
-                                                       (loop (- tries 1))))))))))))
+            (shepherd-service
+             (provision '(bitcoind-cookie-access))
+             (requirement '(bitcoind))
+             (one-shot? #t)
+             (documentation
+              "Make bitcoind's network directory group-traversable.")
+             (start #~(lambda _
+                        (let loop ((tries 120))
+                          (cond ((file-exists?
+                                  (string-append #$netdir "/.cookie"))
+                                 (chmod #$netdir #o750)
+                                 #t)
+                                ((zero? tries) #f)
+                                (else (sleep 1)
+                                      (loop (- tries 1))))))))))))
 
 (define (bitcoin-node-account config)
   (list (user-group

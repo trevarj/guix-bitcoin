@@ -26,44 +26,56 @@
   #:export (mempool-configuration mempool-configuration? mempool-service-type))
 
 (define-configuration/no-serialization mempool-configuration
-                                       (backend-package (file-like
-                                                         mempool-backend)
-                                        "The mempool backend package.")
-                                       (frontend-package (file-like
-                                                          mempool-frontend)
-                                        "The mempool frontend package (static assets served by nginx).")
-                                       (network (symbol 'mainnet)
-                                        "Chain: @code{'mainnet}, @code{'testnet}, @code{'signet},
+  (backend-package
+   (file-like mempool-backend)
+   "The mempool backend package.")
+  (frontend-package
+   (file-like mempool-frontend)
+   "The mempool frontend package (static assets served by nginx).")
+  (network
+   (symbol 'mainnet)
+   "Chain: @code{'mainnet}, @code{'testnet}, @code{'signet},
 @code{'regtest}.")
-                                       (bitcoind-rpc-host (string "127.0.0.1")
-                                        "bitcoind RPC host.")
-                                       (bitcoind-rpc-port (integer 8332)
-                                        "bitcoind RPC port.")
-                                       (bitcoind-cookie (string
-                                                         "/var/lib/bitcoind/.cookie")
-                                        "bitcoind RPC cookie path (per-network subdirectory on non-mainnet).")
-                                       (electrum-host (string "127.0.0.1")
-                                        "Electrum server (electrs/fulcrum) host.")
-                                       (electrum-port (integer 50001)
-                                                      "Electrum server port.")
-                                       (electrum-provision (symbol 'electrs)
-                                        "Shepherd service the backend waits on for its Electrum server, e.g.
+  (bitcoind-rpc-host
+   (string "127.0.0.1")
+   "bitcoind RPC host.")
+  (bitcoind-rpc-port
+   (integer 8332)
+   "bitcoind RPC port.")
+  (bitcoind-cookie
+   (string "/var/lib/bitcoind/.cookie")
+   "bitcoind RPC cookie path (per-network subdirectory on non-mainnet).")
+  (electrum-host
+   (string "127.0.0.1")
+   "Electrum server (electrs/fulcrum) host.")
+  (electrum-port
+   (integer 50001)
+   "Electrum server port.")
+  (electrum-provision
+   (symbol 'electrs)
+   "Shepherd service the backend waits on for its Electrum server, e.g.
 @code{'electrs} or @code{'fulcrum}.")
-                                       (db-name (string "mempool")
-                                        "MariaDB database name.  Only ASCII letters, digits and underscore are
+  (db-name
+   (string "mempool")
+   "MariaDB database name.  Only ASCII letters, digits and underscore are
 allowed.")
-                                       (db-user (string "mempool")
-                                        "MariaDB user.  Only ASCII letters, digits and underscore are
+  (db-user
+   (string "mempool")
+   "MariaDB user.  Only ASCII letters, digits and underscore are
 allowed.")
-                                       (db-password (string "mempool")
-                                        "MariaDB password for @code{db-user}.  Only ASCII letters, digits and
+  (db-password
+   (string "mempool")
+   "MariaDB password for @code{db-user}.  Only ASCII letters, digits and
 underscore are allowed.")
-                                       (http-port (integer 8999)
-                                        "Backend HTTP/WebSocket API port (proxied by nginx).")
-                                       (nginx-server-name (string "_")
-                                        "nginx server_name for the explorer virtual host.")
-                                       (nginx-listen (string "8080")
-                                        "nginx listen directive value for the explorer virtual host."))
+  (http-port
+   (integer 8999)
+   "Backend HTTP/WebSocket API port (proxied by nginx).")
+  (nginx-server-name
+   (string "_")
+   "nginx server_name for the explorer virtual host.")
+  (nginx-listen
+   (string "8080")
+   "nginx listen directive value for the explorer virtual host."))
 
 ;; The backend reads JSON config (require()'d at startup) named by the
 ;; MEMPOOL_CONFIG_FILE environment variable.  Key names below are verified
