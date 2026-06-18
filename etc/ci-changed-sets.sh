@@ -29,7 +29,7 @@ fi
 
 for f in $files; do
     case "$f" in
-        bitcoin/packages/libraries.scm)   add light ;;
+        bitcoin/packages/libraries.scm)   add libs ;;
         bitcoin/packages/nodes.scm)       add nodes ;;
         bitcoin/packages/wallets.scm)     add wallets ;;
         bitcoin/packages/indexers.scm)    add indexers ;;

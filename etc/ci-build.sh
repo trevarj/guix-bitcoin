@@ -1,9 +1,9 @@
 #!/bin/sh
 # Build a named package set:
-#   etc/ci-build.sh {light|nodes|indexers|wallets|lightning|rust|explorers|all|lint}
+#   etc/ci-build.sh {libs|nodes|indexers|wallets|lightning|rust|explorers|all|lint}
 # Used by CI and equally runnable on any build box.
 set -eu
-set_name="${1:-light}"
+set_name="${1:-libs}"
 
 # sparrow-wallet (in bitcoin/packages/wallets.scm, imported transitively by
 # (etc ci-packages)) needs (nonguix build-system binary).  ci-setup-guix.sh
@@ -15,7 +15,7 @@ nonguix_L=""
 [ -d "$NONGUIX_DIR" ] && nonguix_L="-L $NONGUIX_DIR"
 
 case "$set_name" in
-  light) var=%light-packages ;;
+  libs) var=%libs-packages ;;
   nodes) var=%node-packages ;;
   indexers) var=%indexer-packages ;;
   wallets)  var=%wallet-packages ;;
@@ -37,6 +37,6 @@ EOF
     names=$(guix repl -L . $nonguix_L -- "$script")
     rm -f "$script"
     exec guix lint -L . $nonguix_L $names ;;
-  *) echo "unknown set: $set_name (want light|nodes|indexers|wallets|lightning|rust|explorers|binary|all|lint)" >&2; exit 1 ;;
+  *) echo "unknown set: $set_name (want libs|nodes|indexers|wallets|lightning|rust|explorers|binary|all|lint)" >&2; exit 1 ;;
 esac
 exec guix build -L . $nonguix_L -e "(@ (etc ci-packages) $var)"

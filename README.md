@@ -20,14 +20,14 @@ trust. Guile modules live under the `(bitcoin packages ...)` and
 
 All package sets currently build successfully, both VM system tests pass, and
 the example operating system builds. The table reflects verified local builds
-as of 2026-06-16. The `light` badge tracks the per-push `check` workflow;
+as of 2026-06-16. The `libs` badge tracks the per-push `check` workflow;
 heavier package-set badges track the shared changed-set `build-set` workflow,
 which runs automatically when those files change or on demand (see
 [Building](#building--substitutes)).
 
 | Set         | Packages                                                                 | CI |
 |-------------|--------------------------------------------------------------------------|:--:|
-| `light`     | libsecp256k1, libsecp256k1-zkp                                            | [![light](https://img.shields.io/github/actions/workflow/status/trevarj/guix-bitcoin/check.yml?branch=master&label=light)](https://github.com/trevarj/guix-bitcoin/actions/workflows/check.yml) |
+| `libs`      | libsecp256k1, libsecp256k1-zkp                                            | [![libs](https://img.shields.io/github/actions/workflow/status/trevarj/guix-bitcoin/check.yml?branch=master&label=libs)](https://github.com/trevarj/guix-bitcoin/actions/workflows/check.yml) |
 | `nodes`     | bitcoin-core, bitcoin-knots, btcd, floresta                              | [![nodes](https://img.shields.io/github/actions/workflow/status/trevarj/guix-bitcoin/build-set.yml?branch=master&label=nodes)](https://github.com/trevarj/guix-bitcoin/actions/workflows/build-set.yml) |
 | `wallets`   | electrum, hwi, hal, bdk-cli                                              | [![wallets](https://img.shields.io/github/actions/workflow/status/trevarj/guix-bitcoin/build-set.yml?branch=master&label=wallets)](https://github.com/trevarj/guix-bitcoin/actions/workflows/build-set.yml) |
 | `indexers`  | fulcrum, electrs                                                         | [![indexers](https://img.shields.io/github/actions/workflow/status/trevarj/guix-bitcoin/build-set.yml?branch=master&label=indexers)](https://github.com/trevarj/guix-bitcoin/actions/workflows/build-set.yml) |
@@ -43,8 +43,8 @@ with `guix system build`.
 
 | Package              | Version                  | Set         |
 |----------------------|--------------------------|-------------|
-| libsecp256k1         | 0.7.1                    | `light`     |
-| libsecp256k1-zkp     | commit-pinned            | `light`     |
+| libsecp256k1         | 0.7.1                    | `libs`      |
+| libsecp256k1-zkp     | commit-pinned            | `libs`      |
 | bitcoin-core         | 31.0                     | `nodes`     |
 | bitcoin-knots        | 29.3.knots20260508       | `nodes`     |
 | btcd                 | 0.25.0                   | `nodes`     |
@@ -149,10 +149,10 @@ indexer, and Lightning builds to take a while on first install.
 You can build any named set locally the same way CI does:
 
 ```sh
-./etc/ci-build.sh light    # or: nodes indexers wallets lightning rust explorers all
+./etc/ci-build.sh libs    # or: nodes indexers wallets lightning rust explorers all
 ```
 
-CI (`.github/workflows/check.yml`) lints and builds the `light` set on every
+CI (`.github/workflows/check.yml`) lints and builds the `libs` set on every
 push using a cached Guix. Heavier sets build automatically when their files
 change: `build-set.yml` maps each changed file to its set
 (`etc/ci-changed-sets.sh`) and builds exactly those sets in parallel — e.g. a
@@ -161,7 +161,7 @@ set. You can also dispatch a set on demand:
 
 ```sh
 gh workflow run build-set.yml -f package_set=nodes
-# sets: light | nodes | indexers | wallets | lightning | rust | explorers | all
+# sets: libs | nodes | indexers | wallets | lightning | rust | explorers | all
 ```
 
 A monthly job (`.github/workflows/refresh.yml`) runs `guix refresh` over the

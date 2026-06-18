@@ -9,7 +9,7 @@
 #
 # Manual dispatch builds one chosen set:
 #   gh workflow run build-set.yml -f package_set=<set>
-# Sets: light|nodes|indexers|wallets|lightning|rust|explorers|all
+# Sets: libs|nodes|indexers|wallets|lightning|rust|explorers|all
 name: build-set
 on:
   push:
@@ -56,7 +56,7 @@ jobs:
           # matrix runs them in parallel (one sequential "all" job would
           # exceed the per-job timeout).
           case " $names " in
-            *" all "*) names="light nodes wallets indexers lightning rust explorers" ;;
+            *" all "*) names="libs nodes wallets indexers lightning rust explorers" ;;
           esac
           echo "selected sets: ${names:-(none)}"
           sets=$(printf '%s\n' $names | jq -R . | jq -sc 'map(select(length > 0))')

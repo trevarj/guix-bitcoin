@@ -20,7 +20,7 @@ nonguix_L=""
 [ -d "$NONGUIX_DIR" ] && nonguix_L="-L $NONGUIX_DIR"
 
 # set name : ci-packages.scm variable
-SETS="light:%light-packages nodes:%node-packages wallets:%wallet-packages indexers:%indexer-packages lightning:%lightning-packages rust:%rust-packages explorers:%explorer-packages binary:%binary-packages"
+SETS="libs:%libs-packages nodes:%node-packages wallets:%wallet-packages indexers:%indexer-packages lightning:%lightning-packages rust:%rust-packages explorers:%explorer-packages binary:%binary-packages"
 
 # GitHub repo whose Releases page tracks a package whose source URL guix
 # refresh cannot follow.  We query the releases API directly for these.

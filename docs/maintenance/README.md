@@ -19,7 +19,7 @@ self-contained; start from the table below.
 |--------|---------|
 | `source-hash.sh <pkg>` | Recompute a package's source `sha256` after editing its `version`. |
 | `harvest-fod-hash.sh <pkg> [--fix FILE]` | Build a vendored package and read/splice its real fixed-output hash. |
-| `ci-build.sh <set>` | Build a named package set (`light nodes wallets indexers lightning rust explorers all lint`). |
+| `ci-build.sh <set>` | Build a named package set (`libs nodes wallets indexers lightning rust explorers all lint`). |
 | `ci-changed-sets.sh` | Map changed files to the sets CI should build. |
 | `ci-refresh-report.sh` | The monthly update report (run by `refresh.yml`). |
 | `ci-setup-guix.sh` | Install/restore Guix inside a CI container. |

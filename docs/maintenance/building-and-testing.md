@@ -11,7 +11,7 @@ guix build -L . bitcoin-core              # one package
 ./etc/ci-build.sh lint                     # guix lint over every package
 ```
 
-Sets: `light nodes wallets indexers lightning rust explorers all lint`. The set
+Sets: `libs nodes wallets indexers lightning rust explorers all lint`. The set
 membership lives in `etc/ci-packages.scm`.
 
 Heavy builds run in the foreground for a long time (bitcoin-core/knots run their
@@ -42,7 +42,7 @@ activation all evaluate.
 
 ## CI model
 
-- **`check.yml`** — every push: `guix lint` + build the `light` set, on a cached
+- **`check.yml`** — every push: `guix lint` + build the `libs` set, on a cached
   Guix install. Fast gate.
 - **`build-set.yml`** — a `detect` job maps the push's changed files to sets
   (`etc/ci-changed-sets.sh`) and a matrix builds exactly those sets in parallel.

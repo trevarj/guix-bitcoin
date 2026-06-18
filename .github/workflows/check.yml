@@ -34,7 +34,7 @@ jobs:
         if: steps.guix-cache.outputs.cache-hit != 'true'
         run: ./etc/ci-setup-guix.sh ensure
 
-  lint-and-light:
+  lint-and-libs:
     needs: setup-guix
     runs-on: ubuntu-latest
     container:
@@ -51,10 +51,10 @@ jobs:
             /root/.config/guix
             /root/.cache/guix
           key: guix-${{ hashFiles('etc/ci-guix-channels.scm', 'etc/ci-setup-guix.sh') }}
-      - name: Lint and build light set
+      - name: Lint and build libs set
         # Single step: the daemon must be alive in the same shell session
         # tree that runs the builds.
         run: |
           ./etc/ci-setup-guix.sh ensure
           ./etc/ci-build.sh lint
-          ./etc/ci-build.sh light
+          ./etc/ci-build.sh libs

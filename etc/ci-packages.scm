@@ -1,5 +1,5 @@
 ;;; Named package sets for CI and local driver use.
-;;; Usage: guix build -L . -e '(@ (etc ci-packages) %light-packages)' …
+;;; Usage: guix build -L . -e '(@ (etc ci-packages) %libs-packages)' …
 (define-module (etc ci-packages)
   #:use-module (bitcoin packages libraries)
   #:use-module (bitcoin packages nodes)
@@ -8,7 +8,7 @@
   #:use-module (bitcoin packages lightning)
   #:use-module (bitcoin packages rust-bitcoin)
   #:use-module (bitcoin packages explorers)
-  #:export (%light-packages %node-packages
+  #:export (%libs-packages %node-packages
                             %indexer-packages
                             %wallet-packages
                             %lightning-packages
@@ -17,7 +17,7 @@
                             %binary-packages
                             %all-packages))
 
-(define %light-packages
+(define %libs-packages
   (list libsecp256k1 libsecp256k1-zkp))
 
 (define %node-packages
@@ -49,7 +49,7 @@
   (list mempool-backend mempool-frontend))
 
 (define %all-packages
-  (append %light-packages
+  (append %libs-packages
           %node-packages
           %indexer-packages
           %wallet-packages
