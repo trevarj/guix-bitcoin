@@ -105,10 +105,16 @@ GPG-signed and verified against the fingerprint above when you pull.
 
 ## Usage
 
-Install a package directly:
+Try a package in a temporary shell:
 
 ```sh
-guix install bitcoin-core
+guix shell bitcoin-core -- bitcoind --version
+```
+
+Build a package from this channel:
+
+```sh
+guix build bitcoin-core
 ```
 
 ### Services
@@ -139,6 +145,9 @@ A minimal node configuration:
 See [`examples/system-node.scm`](examples/system-node.scm) for a complete, commented
 example (node plus optional indexer, Lightning, and explorer services), and the
 module docstrings in `bitcoin/services/` for the available configuration fields.
+
+For a container-first walkthrough of the explorer stack, see
+[`examples/README.md`](examples/README.md).
 
 ## Building / substitutes
 

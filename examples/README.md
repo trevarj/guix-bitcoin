@@ -1,126 +1,190 @@
 # Examples
 
-Ready-to-run configurations built on this channel. Files are named
-`<format>-<content>`: `system-*` are `guix system` OS configs (also runnable as
-containers), `shell-*` are `guix shell` manifests, and scripts are named by what
-they do.
+Ready-to-run configurations for trying the channel's packages and services.
 
-## Running examples generically
+Start with containers.  They let you run a Bitcoin stack without changing your
+host system, and the default explorer example uses regtest so it has data right
+away.
 
-All commands assume you're at the channel checkout root. `-L .` adds this
-checkout to the load path; **if you've installed the channel via
-`~/.config/guix/channels.scm`, drop the `-L .`** and the modules resolve
-automatically.
+## Before You Run
 
-```sh
-# system-*.scm: build (safe check), reconfigure THIS machine, or try in a VM
-guix system build       -L . examples/<file>.scm
-sudo guix system reconfigure -L . examples/<file>.scm
-guix system vm          -L . examples/<file>.scm
+Run commands from the channel checkout root.
 
-# Any system-*.scm can also run as a throwaway container:
-sudo $(guix system container -L . examples/<file>.scm --network --expose=PORT)
-
-# shell-*.scm: enter an ephemeral environment
-guix shell -L . -m examples/<file>.scm
-```
-
-> OS configs declare a placeholder `/dev/sda` bootloader/root filesystem so
-> `build`, `vm`, and `container` work out of the box. Edit the device names
-> before `reconfigure` on real hardware (containers ignore them).
-
-**Build times.** This channel serves no substitutes, so its own packages
-(`bitcoin-core`, `electrs`, `mempool`) always compile from source; standard
-dependencies (MariaDB, nginx, rust/node toolchains) download from
-`ci.guix.gnu.org`. The estimates below are for a **first** build on a modern
-multi-core x86_64 machine — once a package is in your store, rebuilds are
-near-instant. They are *build* times only, separate from blockchain sync. Add
-`--no-substitutes` and they jump to hours plus tens of GB (the whole dependency
-graph compiles from the bootstrap seed up).
-
-## system-node.scm — minimal node OS
-
-Smallest `guix system` config: a single regtest `bitcoind` with ZMQ enabled.
-Starting point for your own node. Inline comments sketch how to bolt on electrs,
-Core Lightning, and the mempool stack.
+`-L .` adds this checkout to Guix's module load path:
 
 ```sh
-guix system build -L . examples/system-node.scm
+guix build -L . bitcoin-core
 ```
 
-Build time: ~10–20 min first time (compiling `bitcoin-core`; base system
-substituted), near-instant once cached.
-
-## system-explorer.scm — full node + self-hosted block explorer
-
-Full (txindex) node + electrs + MariaDB + nginx + mempool.space. One knob
-(`%network`) switches the whole stack across `regtest`, `signet`, `testnet`, and
-`mainnet`; everything binds to loopback. Run it as a real appliance **or** as a
-container — it's the same `operating-system`.
-
-**Real appliance** — sync from peers; pick signet/testnet/mainnet:
+If you installed the channel in `~/.config/guix/channels.scm` and ran
+`guix pull`, drop `-L .`:
 
 ```sh
-# edit the knob:  (define %network 'signet)
-guix system build       -L . examples/system-explorer.scm    # check
-sudo guix system reconfigure -L . examples/system-explorer.scm
+guix build bitcoin-core
 ```
 
-The node syncs from peers and the explorer fills in as electrs indexes (minutes
-behind tip on signet, hours on mainnet). Reach the UI/electrs over SSH rather
-than exposing them:
+This channel does not serve substitutes for its own packages.  On a first run,
+`bitcoin-core`, `electrs`, and `mempool` build locally from source.
 
-```sh
-ssh -L 8080:127.0.0.1:8080 -L 50001:127.0.0.1:50001 user@host
-# explorer: http://localhost:8080   electrs (e.g. Sparrow): 127.0.0.1:50001
-```
+Standard dependencies still come from `ci.guix.gnu.org` unless you pass
+`--no-substitutes`.
 
-**Instant demo** — set `(define %network 'regtest)`, then run as a container. A
-one-shot mines a demo chain (confirmed txs + a live mempool) on first boot, so
-the explorer has data with no sync:
+## Quickstart: Explorer Container
+
+Run the full explorer stack in a throwaway container:
 
 ```sh
 sudo $(guix system container -L . examples/system-explorer.scm \
-         --network --expose=8080)
-# then open http://localhost:8080  (blocks appear within seconds)
+         --network \
+         --expose=8080)
 ```
 
-Add `--share=$PWD/explorer-state=/var/lib` to persist the chain across restarts
-(the seed is idempotent and skips a non-empty chain).
+Then open:
 
-Build time: ~30–60 min first time — compiles `bitcoin-core`, `electrs`, and the
-`mempool` backend/frontend; standard deps substituted. Near-instant once cached.
-Independent of `%network` (sync time is not).
+```text
+http://localhost:8080
+```
 
-Disk (rough): regtest/signet a few GB; testnet tens of GB; mainnet ~700GB+ (full
-blocks + txindex + electrs index + the mempool DB). Size the root device
-accordingly.
+The example starts:
 
-## shell-from-source.scm — from-source node toolset
+- `bitcoind` on regtest
+- `electrs`
+- MariaDB
+- nginx
+- the mempool.space backend and frontend
 
-A `guix shell` manifest (`bitcoin-core` + `electrs`) for reproducibility demos.
-Build and enter it trusting no server for any package:
+On first boot, a one-shot service mines demo blocks and transactions.  The
+explorer should have data within seconds after the services finish starting.
+
+Stop the container with `Ctrl-c`.
+
+To keep the regtest chain and database between runs:
+
+```sh
+mkdir -p explorer-state
+
+sudo $(guix system container -L . examples/system-explorer.scm \
+         --network \
+         --expose=8080 \
+         --share=$PWD/explorer-state=/var/lib)
+```
+
+The seed step is idempotent.  If the chain is already present, it does not mine
+a fresh demo chain.
+
+Build time: about 30-60 minutes on a first run, because `bitcoin-core`,
+`electrs`, and the `mempool` packages build from source.  Later runs are
+near-instant once the packages are in your store.
+
+## Try Packages in a Shell
+
+For a quick command check, use `guix shell`:
+
+```sh
+guix shell -L . bitcoin-core -- bitcoind --version
+```
+
+To enter a shell with the node and indexer packages:
+
+```sh
+guix shell -L . bitcoin-core electrs
+```
+
+The `shell-from-source.scm` manifest records the same idea as an example file:
+
+```sh
+guix shell -L . -m examples/shell-from-source.scm
+```
+
+For a full-source reproducibility demo, add `--pure --no-substitutes`:
 
 ```sh
 guix shell --pure --no-substitutes -L . -m examples/shell-from-source.scm
 ```
 
-Build time: with substitutes for deps, ~20–40 min (compiling `bitcoin-core` +
-`electrs`). As shown with `--no-substitutes`, the whole graph builds from the
-bootstrap seed: **hours to a day+** and tens of GB of store on first run.
+That builds the whole dependency graph locally.  Expect hours to a day-plus and
+tens of GB of store use on the first run.
 
-See `docs/reproducibility.md` for what each trust level proves.
+See [`docs/reproducibility.md`](../docs/reproducibility.md) for what each trust
+level proves.
 
-## verify-reproducible-build.sh — reproducibility check
+## Build or Check Packages
 
-Builds a channel package twice and re-checks it bit-for-bit (self-determinism).
-Each build is a full from-source compile, so expect it to take a while.
+Build one package:
 
 ```sh
-./examples/verify-reproducible-build.sh            # bitcoin-core (default)
-./examples/verify-reproducible-build.sh electrs    # any channel package
+guix build -L . bitcoin-core
 ```
 
-Build time: builds the package twice (`--rounds=2`) then re-checks it
-(`--check`) — budget roughly 3× a single from-source compile (~45–90 min for
-`bitcoin-core`, less for `electrs`).
+Build the minimal regtest node operating-system:
+
+```sh
+guix system build -L . examples/system-node.scm
+```
+
+Build the explorer operating-system without running it:
+
+```sh
+guix system build -L . examples/system-explorer.scm
+```
+
+Verify a package is reproducible against itself:
+
+```sh
+./examples/verify-reproducible-build.sh
+./examples/verify-reproducible-build.sh electrs
+```
+
+The reproducibility script builds the package twice, then re-checks the store
+copy.  Budget roughly three full package builds.
+
+## Use a Real System Config
+
+The `system-*.scm` files are normal `operating-system` configs.  They can be
+built, run as containers, or adapted into a real Guix System appliance.
+
+For real hardware, edit the placeholder bootloader and root filesystem devices
+before reconfiguring.  Containers ignore those fields, but `guix system`
+requires them to exist.
+
+To turn the explorer into a networked appliance, edit the network knob in
+`examples/system-explorer.scm`:
+
+```scheme
+(define %network 'signet)        ; 'regtest | 'signet | 'testnet | 'mainnet
+```
+
+Then build and reconfigure:
+
+```sh
+guix system build -L . examples/system-explorer.scm
+sudo guix system reconfigure -L . examples/system-explorer.scm
+```
+
+On signet, testnet, and mainnet, the node syncs from peers and the explorer
+fills in as `electrs` indexes.
+
+Keep the UI and Electrum port bound to loopback.  Use SSH tunnels for remote
+access:
+
+```sh
+ssh -L 8080:127.0.0.1:8080 \
+    -L 50001:127.0.0.1:50001 \
+    user@host
+```
+
+Then use:
+
+```text
+explorer: http://localhost:8080
+electrs:  127.0.0.1:50001
+```
+
+Rough disk needs:
+
+- regtest/signet: a few GB
+- testnet: tens of GB
+- mainnet: 700GB+
+
+Mainnet needs full blocks, `txindex`, the `electrs` index, and the mempool
+database.

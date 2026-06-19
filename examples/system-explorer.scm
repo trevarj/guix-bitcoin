@@ -2,16 +2,17 @@
 ;; mempool.space, as a `guix system' operating-system.  One knob (%network)
 ;; switches the whole stack across regtest, signet, testnet and mainnet.
 ;;
-;; Run it two ways -- it's the same operating-system either way:
+;; Run it two ways -- it's the same operating-system either way.  The default
+;; is regtest so a first container run gets instant demo data.
 ;;
-;;   Real appliance (sync from peers; pick signet/testnet/mainnet):
-;;     guix system build       -L . examples/system-explorer.scm   # check
-;;     sudo guix system reconfigure -L . examples/system-explorer.scm
-;;
-;;   Throwaway container (set %network to 'regtest for instant demo data):
+;;   Throwaway container:
 ;;     sudo $(guix system container -L . examples/system-explorer.scm \
 ;;              --network --expose=8080)
 ;;     # then open http://localhost:8080
+;;
+;;   Real appliance (edit %network to signet/testnet/mainnet, then sync):
+;;     guix system build       -L . examples/system-explorer.scm   # check
+;;     sudo guix system reconfigure -L . examples/system-explorer.scm
 ;;
 ;; What runs (all bound to loopback):
 ;;   1. bitcoind  -- full node with txindex=1 (mempool's backend calls
@@ -52,7 +53,7 @@
 
 ;; ---------------------------------------------------------------------------
 ;; The one knob.  Switch the whole stack by editing this line.
-(define %network 'signet)        ; 'regtest | 'signet | 'testnet | 'mainnet
+(define %network 'regtest)       ; 'regtest | 'signet | 'testnet | 'mainnet
 ;; ---------------------------------------------------------------------------
 
 (define %datadir "/var/lib/bitcoind")
