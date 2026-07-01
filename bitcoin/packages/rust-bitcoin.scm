@@ -102,10 +102,10 @@ descriptors.")
 (define-public rust-bdk-wallet
   (package
     (name "rust-bdk-wallet")
-    (version "3.0.0")
+    (version "3.1.0")
     (source
      (crate-source "bdk_wallet" version
-                   "1vyl64dmdid2cvgwinmjdnsim4ldpzbg2zsvr97kf8kdabww9wv7"))
+                   "129j19gr7hqdhgpvnj9cvjm3hznfsps5aavifck05qy3mhizp10j"))
     (build-system cargo-build-system)
     (arguments
      (list
