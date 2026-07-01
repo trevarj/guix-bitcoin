@@ -18,10 +18,10 @@
 (define-public rust-bitcoin
   (package
     (name "rust-bitcoin")
-    (version "0.32.100")
+    (version "0.32.101")
     (source
      (crate-source "bitcoin" version
-                   "0v0vx5srvby18nqih2b28786yx3jygfpbfk869gjh48i4jci4n1r"))
+                   "1kmhlr7ah24ig35z72lxshl9jjlbb2wbjbqfp7xsdxwziavwrn4f"))
     (build-system cargo-build-system)
     (arguments
      (list

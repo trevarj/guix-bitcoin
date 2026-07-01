@@ -135,6 +135,10 @@
   (crate-source "arrayvec" "0.7.6"
                 "0l1fz4ccgv6pm609rif37sl5nv5k6lbzi7kkppgzqzh1vwix20kw"))
 
+(define rust-arrayvec-0.7.7
+  (crate-source "arrayvec" "0.7.7"
+                "1zjxk501fc4lnkzkdicqsk7y3l3agw89ziqjzcjca6ry9n484a7h"))
+
 (define rust-ascii-1.1.0
   (crate-source "ascii" "1.1.0"
                 "05nyyp39x4wzc1959kv7ckwqpkdzjd9dw4slzyjh73qbhjcfqayr"))
@@ -235,6 +239,10 @@
 (define rust-base58ck-0.1.100
   (crate-source "base58ck" "0.1.100"
                 "05kqhicnb33xpk5zrx0a9v4a4wbbdl406z6sc805zcbvkzhcfpgc"))
+
+(define rust-base58ck-0.1.101
+  (crate-source "base58ck" "0.1.101"
+                "1w7gnavhs2bfl1rpr6m475pgng7vhgmgmi26388x139fbg6hlp1n"))
 
 (define rust-base64-0.13.1
   (crate-source "base64" "0.13.1"
@@ -392,6 +400,10 @@
   (crate-source "bitcoin_hashes" "0.14.100"
                 "0gwfj642yka9zwxqkjji4ilg8i8zb7i164gbdv41yfhkdsjh368c"))
 
+(define rust-bitcoin-hashes-0.14.101
+  (crate-source "bitcoin_hashes" "0.14.101"
+                "18n4w9iq6y9gzdm74r93mcilyj7xijc81j03fkbig20cnjmwg95w"))
+
 (define rust-bitcoin-hashes-0.15.0
   (crate-source "bitcoin_hashes" "0.15.0"
                 "0fcnh1916rhc7xlkcgdyvvhb7604xsph45j13afxhl1ar1hj5670"))
@@ -428,6 +440,10 @@
   (crate-source "bitcoin-io" "0.1.100"
                 "0xg1i60v4cb9z6w4jp293q1p38w8vlzl05hrpfkxw8kgn3q1sc0i"))
 
+(define rust-bitcoin-io-0.1.101
+  (crate-source "bitcoin-io" "0.1.101"
+                "0y6blijdavjv50d5f720ymk99y2hv32fn68q7jfwa6lx6qvf0pdv"))
+
 (define rust-bitcoin-io-0.1.3
   (crate-source "bitcoin-io" "0.1.3"
                 "1bvbhm5yqv3kqrwm5d79yjak1djjkgnkamcc373v1vckgamw8iqb"))
@@ -459,6 +475,10 @@
 (define rust-bitcoin-units-0.1.100
   (crate-source "bitcoin-units" "0.1.100"
                 "0idqyd82nrc0qzr3fsl62i6zq4b2arda7dnbqhi1n3cdnxbx3fjp"))
+
+(define rust-bitcoin-units-0.1.101
+  (crate-source "bitcoin-units" "0.1.101"
+                "0l9v2y2sd3mcvwsq6f0mikp02vpayg343z5nnnj8kl3iyf9mdfcw"))
 
 (define rust-bitcoin-units-0.1.2
   (crate-source "bitcoin-units" "0.1.2"
@@ -599,6 +619,10 @@
 (define rust-cc-1.2.64
   (crate-source "cc" "1.2.64"
                 "07shcd8faxw7csz13m3cg2mj6i8z07pqs960k181pscbjpyqgn6s"))
+
+(define rust-cc-1.2.65
+  (crate-source "cc" "1.2.65"
+                "15iv1nizwngnq9if3id4cjjs4pl0rnjkd6xm82vcq5vwpv4ywa72"))
 
 (define rust-cexpr-0.6.0
   (crate-source "cexpr" "0.6.0"
@@ -2251,6 +2275,10 @@
   (crate-source "quote" "1.0.45"
                 "095rb5rg7pbnwdp6v8w5jw93wndwyijgci1b5lw8j1h5cscn3wj1"))
 
+(define rust-quote-1.0.46
+  (crate-source "quote" "1.0.46"
+                "0s034glrlav8nzqy2yskqzv52ncy82k126sm2jk5j1vs1iylbg6z"))
+
 (define rust-r-efi-5.2.0
   (crate-source "r-efi" "5.2.0"
                 "1ig93jvpqyi87nc5kb6dri49p56q7r7qxrn8kfizmqkfj5nmyxkl"))
@@ -2777,6 +2805,10 @@
 (define rust-syn-2.0.117
   (crate-source "syn" "2.0.117"
                 "16cv7c0wbn8amxc54n4w15kxlx5ypdmla8s0gxr2l7bv7s0bhrg6"))
+
+(define rust-syn-2.0.118
+  (crate-source "syn" "2.0.118"
+                "08hlbc32lqd5d67p26ck7chg0rkclsw9as6f96vfn4s2j1zyb6hv"))
 
 (define rust-syn-2.0.96
   (crate-source "syn" "2.0.96"
@@ -4792,20 +4824,23 @@
                                     rust-yaml-rust-0.4.5))
                      (rust-bitcoin =>
                                    (list rust-arbitrary-1.4.2
-                                    rust-arrayvec-0.7.6
-                                    rust-base58ck-0.1.100
+                                    rust-arrayvec-0.7.7
+                                    rust-base58ck-0.1.101
                                     rust-base64-0.21.7
                                     rust-bech32-0.11.1
                                     rust-bincode-1.3.3
-                                    rust-bitcoin-hashes-0.14.100
-                                    rust-bitcoin-io-0.1.100
-                                    rust-bitcoin-units-0.1.100
+                                    rust-bitcoin-consensus-encoding-1.0.0
+                                    rust-bitcoin-hashes-0.14.101
+                                    rust-bitcoin-internals-0.5.0
+                                    rust-bitcoin-io-0.1.101
+                                    rust-bitcoin-units-0.1.101
                                     rust-bitcoinconsensus-0.105.0+25.1
-                                    rust-cc-1.2.64
+                                    rust-cc-1.2.65
                                     rust-cfg-if-1.0.4
                                     rust-find-msvc-tools-0.1.9
                                     rust-getrandom-0.2.17
                                     rust-hex-conservative-0.2.2
+                                    rust-hex-conservative-0.3.2
                                     rust-hex-lit-0.1.1
                                     rust-itoa-1.0.18
                                     rust-libc-0.2.186
@@ -4813,7 +4848,7 @@
                                     rust-ordered-0.2.2
                                     rust-ppv-lite86-0.2.21
                                     rust-proc-macro2-1.0.106
-                                    rust-quote-1.0.45
+                                    rust-quote-1.0.46
                                     rust-rand-0.8.6
                                     rust-rand-chacha-0.3.1
                                     rust-rand-core-0.6.4
@@ -4825,7 +4860,7 @@
                                     rust-serde-json-1.0.150
                                     rust-serde-test-1.0.177
                                     rust-shlex-2.0.1
-                                    rust-syn-2.0.117
+                                    rust-syn-2.0.118
                                     rust-unicode-ident-1.0.24
                                     rust-wasi-0.11.1+wasi-snapshot-preview1
                                     rust-zerocopy-0.8.52
@@ -5264,4 +5299,3 @@
                                         rust-windows-x86-64-gnu-0.52.6
                                         rust-windows-x86-64-gnullvm-0.52.6
                                         rust-windows-x86-64-msvc-0.52.6)))
-
