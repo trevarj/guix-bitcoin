@@ -36,7 +36,11 @@ case "$set_name" in
 EOF
     names=$(guix repl -L . $nonguix_L -- "$script")
     rm -f "$script"
-    exec guix lint -L . $nonguix_L $names ;;
+    # The CVE checker downloads large yearly databases from nvd.nist.gov and
+    # intermittently aborts CI on truncated responses before package lint
+    # findings are reported.  Keep CI linting deterministic; run `guix lint`
+    # without this exclusion locally when a vulnerability sweep is needed.
+    exec guix lint -L . $nonguix_L --exclude=cve $names ;;
   *) echo "unknown set: $set_name (want libs|nodes|indexers|wallets|lightning|rust|explorers|binary|all|lint)" >&2; exit 1 ;;
 esac
 exec guix build -L . $nonguix_L -e "(@ (etc ci-packages) $var)"
