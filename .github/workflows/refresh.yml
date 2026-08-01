@@ -69,6 +69,12 @@ jobs:
       options: --security-opt seccomp=unconfined
     timeout-minutes: 350
     steps:
+      # Without Git, checkout falls back to a source archive with no repository
+      # metadata for the updater's clean-tree and changed-file guards.
+      - name: Install Git for checkout
+        run: |
+          apt-get update -qq
+          apt-get install -y -qq ca-certificates git
       - uses: actions/checkout@v4
       - uses: actions/cache/restore@v4
         with:
