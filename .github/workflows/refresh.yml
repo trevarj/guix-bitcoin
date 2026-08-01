@@ -82,6 +82,9 @@ jobs:
         id: update
         run: |
           ./etc/ci-setup-guix.sh ensure
+          # checkout configures Git on the host, while this job runs Git as
+          # root inside the container.
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
           ./etc/ci-auto-update.sh "${{ matrix.package }}"
           if ! git diff --quiet; then
             guix lint -L . --exclude=cve "${{ matrix.package }}"
