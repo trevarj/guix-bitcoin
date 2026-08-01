@@ -35,7 +35,7 @@
 (define-public core-lightning
   (package
     (name "core-lightning")
-    (version "26.06.2")
+    (version "26.06.6")
     (source
      (origin
        (method git-fetch)
@@ -47,7 +47,7 @@
              (recursive? #t)))
        (file-name (git-file-name name version))
        (sha256
-        (base32 "0b0cbyda7msidns0fhwcyhnjifjanimlf8pnlzp5ys9y5i93x5qz"))))
+        (base32 "1s3m1br12ahy280dsj53nc9saayxrb7wk6ypb2kkgxnyb667crgj"))))
     (build-system gnu-build-system)
     (arguments
      (list
