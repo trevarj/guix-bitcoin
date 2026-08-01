@@ -149,8 +149,20 @@ jobs:
           } >> refresh-report.md
           gh label create package-updates --repo "$REPO" \
             --color FBCA04 --description "Monthly upstream update check" --force || true
-          gh issue create --repo "$REPO" \
-            --title "Package updates — $(date -u +%Y-%m)" \
-            --body-file refresh-report.md \
-            --assignee trevarj \
-            --label package-updates
+          title="Package updates — $(date -u +%Y-%m)"
+          issue_number=$(gh issue list --repo "$REPO" --state open \
+            --label package-updates --limit 100 --json number,title \
+            | jq -r --arg title "$title" \
+                '.[] | select(.title == $title) | .number' | head -n 1)
+          if [ -n "$issue_number" ]; then
+            gh issue edit "$issue_number" --repo "$REPO" \
+              --body-file refresh-report.md \
+              --add-assignee trevarj \
+              --add-label package-updates
+          else
+            gh issue create --repo "$REPO" \
+              --title "$title" \
+              --body-file refresh-report.md \
+              --assignee trevarj \
+              --label package-updates
+          fi
