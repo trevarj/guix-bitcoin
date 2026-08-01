@@ -177,18 +177,19 @@ jobs:
             } > auto-update-pr.md
           }
 
-          pr_number=$(gh pr list --repo "$REPO" --state open \
-            --base "$BASE_BRANCH" --head "$branch" --limit 1 \
-            --json number --jq '.[0].number // empty')
+          owner=${REPO%%/*}
+          pr_number=$(gh api --method GET "repos/$REPO/pulls" \
+            -f state=open -f base="$BASE_BRANCH" -f head="$owner:$branch" \
+            -f per_page=1 --jq '.[0].number // empty')
           if [ -z "$pr_number" ]; then
             write_body NUMBER
-            pr_url=$(gh pr create --repo "$REPO" --base "$BASE_BRANCH" \
-              --head "$branch" --title "$title" --body-file auto-update-pr.md)
-            pr_number=${pr_url##*/}
+            pr_number=$(gh api --method POST "repos/$REPO/pulls" \
+              -f base="$BASE_BRANCH" -f head="$branch" -f title="$title" \
+              -f body="$(cat auto-update-pr.md)" --jq .number)
           fi
           write_body "$pr_number"
-          gh pr edit "$pr_number" --repo "$REPO" \
-            --title "$title" --body-file auto-update-pr.md
+          gh api --method PATCH "repos/$REPO/pulls/$pr_number" \
+            -f title="$title" -f body="$(cat auto-update-pr.md)" >/dev/null
 
   notify:
     if: always() && needs.report.result == 'success'
