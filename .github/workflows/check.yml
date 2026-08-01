@@ -13,6 +13,24 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  automation-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check automatic updater contract
+        run: |
+          sh -n etc/ci-auto-update.sh
+          test "$(./etc/ci-auto-update.sh --file electrum)" = bitcoin/packages/wallets.scm
+          test "$(./etc/ci-auto-update.sh --file core-lightning)" = bitcoin/packages/lightning.scm
+          test "$(./etc/ci-auto-update.sh --list | wc -l)" -eq 5
+          for package in $(./etc/ci-auto-update.sh --list); do
+            test -n "$(./etc/ci-auto-update.sh --version "$package")"
+          done
+          if ./etc/ci-auto-update.sh --file bitcoin-core; then
+            echo "bitcoin-core must remain outside the mechanical-update allowlist" >&2
+            exit 1
+          fi
+
   setup-guix:
     runs-on: ubuntu-latest
     container:

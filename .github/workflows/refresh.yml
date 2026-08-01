@@ -1,12 +1,13 @@
 # Monthly upstream-release check.  Runs `guix refresh` over the channel's
-# packages (etc/ci-refresh-report.sh) and opens a GitHub issue assigned to
-# the maintainer summarising what is outdated -- GitHub emails the assignee
-# via normal notifications, so no SMTP secret is needed.
+# packages (etc/ci-refresh-report.sh), prepares validated patches for the safe
+# mechanical-update allowlist, and opens a GitHub issue assigned to the
+# maintainer.  GitHub emails the assignee via normal notifications, so no SMTP
+# secret is needed.
 #
-# Report-only: bumps still need a signed commit (channel authentication)
-# and, for vendored packages, manual hash harvesting, so this does not open
-# PRs.  GitHub-only on purpose -- mirroring to Forgejo would open a second
-# issue and double the email.
+# Patch artifacts stop before commit because channel authentication requires an
+# authorized maintainer signature.  Complex bumps still need manual work.
+# GitHub-only on purpose -- mirroring to Forgejo would open a second issue and
+# double the email.
 #
 # Trigger manually any time:  gh workflow run refresh.yml
 name: refresh
@@ -45,8 +46,68 @@ jobs:
           name: refresh-report
           path: refresh-report.md
 
+  prepare-auto-update:
+    runs-on: ubuntu-latest
+    outputs:
+      packages: ${{ steps.matrix.outputs.packages }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: matrix
+        run: |
+          packages=$(./etc/ci-auto-update.sh --list | jq -R . | jq -sc .)
+          echo "packages=$packages" >> "$GITHUB_OUTPUT"
+
+  auto-update:
+    needs: prepare-auto-update
+    strategy:
+      fail-fast: false
+      matrix:
+        package: ${{ fromJSON(needs.prepare-auto-update.outputs.packages) }}
+    runs-on: ubuntu-latest
+    container:
+      image: debian:bookworm
+      options: --security-opt seccomp=unconfined
+    timeout-minutes: 350
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/cache/restore@v4
+        with:
+          path: |
+            /gnu
+            /var/guix
+            /root/.config/guix
+            /root/.cache/guix
+          key: guix-${{ hashFiles('etc/ci-guix-channels.scm', 'etc/ci-setup-guix.sh') }}
+      - name: Prepare and validate update
+        id: update
+        run: |
+          ./etc/ci-setup-guix.sh ensure
+          ./etc/ci-auto-update.sh "${{ matrix.package }}"
+          if ! git diff --quiet; then
+            guix lint -L . --exclude=cve "${{ matrix.package }}"
+            guix build -L . "${{ matrix.package }}"
+          fi
+      - name: Package update patch
+        if: steps.update.outputs.changed == 'true'
+        run: |
+          mkdir auto-update-artifact
+          git diff --binary -- "${{ steps.update.outputs.file }}" \
+            > "auto-update-artifact/${{ matrix.package }}.patch"
+          {
+            echo "package=${{ matrix.package }}"
+            echo "old_version=${{ steps.update.outputs.old_version }}"
+            echo "new_version=${{ steps.update.outputs.new_version }}"
+          } > "auto-update-artifact/metadata.env"
+      - uses: actions/upload-artifact@v4
+        if: steps.update.outputs.changed == 'true'
+        with:
+          name: package-update-${{ matrix.package }}
+          path: auto-update-artifact
+          retention-days: 30
+
   notify:
-    needs: report
+    if: always() && needs.report.result == 'success'
+    needs: [report, prepare-auto-update, auto-update]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4
@@ -57,7 +118,20 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
+          AUTO_UPDATE_RESULT: ${{ needs.auto-update.result }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
+          {
+            echo
+            echo "## Automated update patches"
+            echo
+            if [ "$AUTO_UPDATE_RESULT" = success ]; then
+              echo "Any mechanically safe updates found were validated; their patches are attached to the [workflow run]($RUN_URL)."
+            else
+              echo "Automated patch preparation did not fully succeed; inspect the [workflow run]($RUN_URL)."
+            fi
+            echo "Apply each patch, review it, and create an authorized signed commit. Complex updates remain manual."
+          } >> refresh-report.md
           gh label create package-updates --repo "$REPO" \
             --color FBCA04 --description "Monthly upstream update check" --force || true
           gh issue create --repo "$REPO" \
