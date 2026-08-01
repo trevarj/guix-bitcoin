@@ -46,7 +46,7 @@
 (define-public electrum
   (package
     (name "electrum")
-    (version "4.7.2")
+    (version "4.8.0")
     (source
      (origin
        (method git-fetch)
@@ -55,10 +55,10 @@
              (commit version)))
        (file-name (git-file-name name version))
        (sha256
-        (base32 "05y3w9jhpfxd7frzlilqvsfggrgfzcml2spc2qb5xx9j4q62hnmx"))))
+        (base32 "1yx1nw3649i25fsr7j718khc58cx6kicirrpdm488nyz4sf8ixl0"))))
     (build-system pyproject-build-system)
     ;; Arguments and inputs adapted verbatim from upstream Guix's electrum
-    ;; (gnu/packages/finance.scm), which is at the same 4.7.2 version.
+    ;; (gnu/packages/finance.scm), which is at the same 4.8.0 version.
     (arguments
      (list
       ;; Either pycryptodomex or cryptography must be available.  This package
