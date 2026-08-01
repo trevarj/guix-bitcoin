@@ -75,6 +75,7 @@ esac
 auto_update_package=$1
 auto_update_package_file=$(auto_update_file "$auto_update_package")
 auto_update_guix=${AUTO_UPDATE_GUIX:-guix}
+auto_update_nonguix_dir=${NONGUIX_DIR:-/tmp/guix-nonguix}
 
 auto_update_root=$(git rev-parse --show-toplevel 2>/dev/null) \
     || auto_update_die "not inside a Git checkout"
@@ -92,7 +93,12 @@ auto_update_old_version=$(auto_update_version \
 [ -n "$auto_update_old_version" ] \
     || auto_update_die "could not read $auto_update_package version"
 
-"$auto_update_guix" refresh -L . -u "$auto_update_package"
+if [ -d "$auto_update_nonguix_dir" ]; then
+    "$auto_update_guix" refresh -L . -L "$auto_update_nonguix_dir" \
+        -u "$auto_update_package"
+else
+    "$auto_update_guix" refresh -L . -u "$auto_update_package"
+fi
 
 auto_update_changed_files=$(git diff --name-only)
 case "$auto_update_changed_files" in

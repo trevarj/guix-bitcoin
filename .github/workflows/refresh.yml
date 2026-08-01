@@ -94,8 +94,13 @@ jobs:
           git rev-parse --show-toplevel
           ./etc/ci-auto-update.sh "${{ matrix.package }}"
           if ! git diff --quiet; then
-            guix lint -L . --exclude=cve "${{ matrix.package }}"
-            guix build -L . "${{ matrix.package }}"
+            if [ -d /tmp/guix-nonguix ]; then
+              guix lint -L . -L /tmp/guix-nonguix --exclude=cve "${{ matrix.package }}"
+              guix build -L . -L /tmp/guix-nonguix "${{ matrix.package }}"
+            else
+              guix lint -L . --exclude=cve "${{ matrix.package }}"
+              guix build -L . "${{ matrix.package }}"
+            fi
           fi
       - name: Package update patch
         if: steps.update.outputs.changed == 'true'
