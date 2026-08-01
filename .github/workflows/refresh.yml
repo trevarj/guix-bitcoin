@@ -1,11 +1,12 @@
 # Monthly upstream-release check.  Runs `guix refresh` over the channel's
-# packages (etc/ci-refresh-report.sh), prepares validated patches for the safe
-# mechanical-update allowlist, and opens a GitHub issue assigned to the
-# maintainer.  GitHub emails the assignee via normal notifications, so no SMTP
-# secret is needed.
+# packages (etc/ci-refresh-report.sh), opens one pull request per validated
+# mechanical update, and maintains a GitHub issue assigned to the maintainer.
+# GitHub emails the assignee via normal notifications, so no SMTP secret is
+# needed.
 #
-# Patch artifacts stop before commit because channel authentication requires an
-# authorized maintainer signature.  Complex bumps still need manual work.
+# Bot commits stay off master because channel authentication requires an
+# authorized maintainer signature.  Integrate each PR with etc/merge-pr.sh so
+# the resulting master commit is signed.  Complex bumps still need manual work.
 # GitHub-only on purpose -- mirroring to Forgejo would open a second issue and
 # double the email.
 #
@@ -18,7 +19,6 @@ on:
 
 permissions:
   contents: read
-  issues: write
 
 jobs:
   report:
@@ -59,6 +59,9 @@ jobs:
 
   auto-update:
     needs: prepare-auto-update
+    permissions:
+      contents: write
+      pull-requests: write
     strategy:
       fail-fast: false
       matrix:
@@ -71,10 +74,10 @@ jobs:
     steps:
       # Without Git, checkout falls back to a source archive with no repository
       # metadata for the updater's clean-tree and changed-file guards.
-      - name: Install Git for checkout
+      - name: Install Git and GitHub CLI
         run: |
           apt-get update -qq
-          apt-get install -y -qq ca-certificates git
+          apt-get install -y -qq ca-certificates gh git
       - uses: actions/checkout@v4
       - uses: actions/cache/restore@v4
         with:
@@ -119,11 +122,82 @@ jobs:
           name: package-update-${{ matrix.package }}
           path: auto-update-artifact
           retention-days: 30
+      - name: Open or refresh update pull request
+        if: steps.update.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          BASE_BRANCH: ${{ github.event.repository.default_branch }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          PACKAGE: ${{ matrix.package }}
+          FILE: ${{ steps.update.outputs.file }}
+          OLD_VERSION: ${{ steps.update.outputs.old_version }}
+          NEW_VERSION: ${{ steps.update.outputs.new_version }}
+        run: |
+          branch="auto-update/$PACKAGE"
+          title="chore($PACKAGE): update to $NEW_VERSION"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- "$FILE"
+          git commit -m "$title" \
+            -m "- update $PACKAGE from $OLD_VERSION to $NEW_VERSION" \
+            -m "- validate with guix lint and guix build"
+
+          # Stable per-package branches make retries update the existing PR.
+          # Respect the last remote value so concurrent/manual branch edits are
+          # never overwritten silently.
+          if git fetch origin \
+              "refs/heads/$branch:refs/remotes/origin/$branch"; then
+            expected=$(git rev-parse "refs/remotes/origin/$branch")
+            git push --force-with-lease="refs/heads/$branch:$expected" \
+              origin "HEAD:refs/heads/$branch"
+          else
+            git push origin "HEAD:refs/heads/$branch"
+          fi
+
+          write_body() {
+            pr_number=$1
+            {
+              echo "Automated mechanical update prepared by [refresh CI]($RUN_URL)."
+              echo
+              echo "- Package: \`$PACKAGE\`"
+              echo "- Version: \`$OLD_VERSION\` -> \`$NEW_VERSION\`"
+              echo "- Validation: \`guix lint\` and \`guix build\` passed"
+              echo
+              echo "The bot commit is not authorized for the authenticated channel."
+              echo "Do not use GitHub's merge button. Integrate and sign it locally:"
+              echo
+              echo "\`\`\`sh"
+              echo "etc/merge-pr.sh origin pull/$pr_number/head"
+              echo "git push origin master"
+              echo "git push codeberg master"
+              echo "gh pr close $pr_number --delete-branch"
+              echo "\`\`\`"
+            } > auto-update-pr.md
+          }
+
+          pr_number=$(gh pr list --repo "$REPO" --state open \
+            --base "$BASE_BRANCH" --head "$branch" --limit 1 \
+            --json number --jq '.[0].number // empty')
+          if [ -z "$pr_number" ]; then
+            write_body NUMBER
+            pr_url=$(gh pr create --repo "$REPO" --base "$BASE_BRANCH" \
+              --head "$branch" --title "$title" --body-file auto-update-pr.md)
+            pr_number=${pr_url##*/}
+          fi
+          write_body "$pr_number"
+          gh pr edit "$pr_number" --repo "$REPO" \
+            --title "$title" --body-file auto-update-pr.md
 
   notify:
     if: always() && needs.report.result == 'success'
     needs: [report, prepare-auto-update, auto-update]
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: read
     steps:
       - uses: actions/download-artifact@v4
         with:
@@ -138,14 +212,21 @@ jobs:
         run: |
           {
             echo
-            echo "## Automated update patches"
+            echo "## Automated update pull requests"
             echo
             if [ "$AUTO_UPDATE_RESULT" = success ]; then
-              echo "Any mechanically safe updates found were validated; their patches are attached to the [workflow run]($RUN_URL)."
+              echo "Mechanically safe updates were validated and opened as pull requests; patch artifacts are also attached to the [workflow run]($RUN_URL)."
             else
               echo "Automated patch preparation did not fully succeed; inspect the [workflow run]($RUN_URL)."
             fi
-            echo "Apply each patch, review it, and create an authorized signed commit. Complex updates remain manual."
+            echo
+            echo "Review each automated PR, then use its \`etc/merge-pr.sh\` command to create the authorized signed commit. Complex updates remain manual."
+            echo
+            echo "### Open automated update PRs"
+            echo
+            gh pr list --repo "$REPO" --state open --limit 100 \
+              --json number,title,url,headRefName \
+              --jq '.[] | select(.headRefName | startswith("auto-update/")) | "- [#\(.number) \(.title)](\(.url))"'
           } >> refresh-report.md
           gh label create package-updates --repo "$REPO" \
             --color FBCA04 --description "Monthly upstream update check" --force || true
